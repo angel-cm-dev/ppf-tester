@@ -1,11 +1,11 @@
 # Hoja de ruta
 
-Una mejora nueva cada día, publicada como versión en [Releases](https://github.com/angel-cm-dev/ppf-tester/releases).
+Una mejora nueva por versión (fechas orientativas), publicada en [Releases](https://github.com/angel-cm-dev/ppf-tester/releases).
 Estado: ⬜ pendiente · ✅ publicada · ⏸️ requiere acción del autor
 
 | # | Fecha prevista | Versión | Mejora | Estado |
 |---|---|---|---|---|
-| 1 | 2026-11-23 | 3.1.0 | **Importar kits desde WAV**: arrastrar una carpeta de WAV y crear el `.ppf` con mapeo GM y capas de velocidad reales | ⬜ |
+| 1 | 2026-11-22 | 3.1.0 | **Importar kits desde WAV**: arrastrar una carpeta de WAV y crear el `.ppf` con mapeo GM y capas de velocidad reales | ✅ |
 | 2 | 2026-11-24 | 3.2.0 | **Round robin / variación humana**: golpes que no suenan idénticos (simulación y capas micro-variadas en el pack) | ⬜ |
 | 3 | 2026-11-25 | 3.3.0 | **Instalador `Setup.exe`**: acceso directo, doble clic en `.ppf` y desinstalador | ⬜ |
 | 4 | 2026-11-26 | 3.4.0 | **Estéreo real** para platos y ambiente, con coste de memoria por modelo | ⬜ |

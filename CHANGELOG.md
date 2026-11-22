@@ -2,6 +2,21 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y [versionado semántico](https://semver.org/lang/es/).
 
+## [3.1.0] - 2026-11-22
+
+### Añadido
+- **Importar WAV**: elige (o arrastra) una carpeta con golpes de batería y la app arma el `.ppf` sola.
+  - Lee WAV PCM 8/16/24/32 bits y float, mono o estéreo, a cualquier frecuencia (se convierte a 44.1 kHz).
+  - Detecta cada pieza por las carpetas y el nombre (Kick, Snare, Toms/Floor Tom, Cymbals/Hi Hat…,
+    en inglés, español y portugués) o por el sonido, e ignora loops y demos.
+  - Agrupa las versiones de cada golpe y las capas de velocidad marcadas en el nombre (soft/hard, pp/ff, v1…).
+  - Propone el kit en las teclas General MIDI (bombo 2, caja 2, crash 2, toms afinados en las teclas libres)
+    y separa hi-hat cerrado/abierto por su duración.
+  - Todo editable: tecla, pieza, versión, capas, afinación y activar/quitar; arrastra filas o archivos al
+    piano para mover o asignar piezas (si la tecla está ocupada, se intercambian).
+  - Ajusta el kit a la memoria del teclado elegido (S670 a S975) y aplica la mejora por pieza.
+- Comando `importar` en la línea de comandos.
+
 ## [3.0.0] - 2026-11-22
 
 ### Añadido

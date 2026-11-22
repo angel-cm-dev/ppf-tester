@@ -45,6 +45,7 @@ def main():
         sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", "--windowed",
         "--name", "PPF-Tester", "--icon", ico, "--version-file", vfile,
         "--add-data", f"{ico}{os.pathsep}.",
+        "--add-data", f"{os.path.join(SRC, 'plantillas')}{os.pathsep}plantillas",
         "--paths", SRC,
         "--distpath", os.path.join(ROOT, "dist"), "--workpath", build, "--specpath", build,
         # módulos que no se usan (reduce tamaño)

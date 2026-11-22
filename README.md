@@ -37,6 +37,7 @@
 
 | | |
 |---|---|
+| **Importar WAV** | Arrastra una carpeta con tus golpes de batería y la app arma el `.ppf`: detecta bombo, caja, toms, hi-hat y platos, junta versiones y capas, y lo ajusta a la memoria de tu teclado. Puedes mover piezas al piano arrastrándolas. |
 | **Muestras** | Piano con el estado de cada tecla, forma de onda, espectro, medidas (pico, RMS, DC, silencios) y editor por tecla (afinación, volumen, paneo, filtro, grupo de corte). Reemplaza una muestra por un WAV. |
 | **Escuchar** | Toca el kit con el ratón o el teclado del PC: *simulación del PSR* (curva de velocidad, filtro, paneo, reverb), *PSR real por MIDI* (sonido exacto, con monitor y grabación) o la *muestra original*. Comparación A/B y ritmos de prueba (balada, worship 6/8, pop, rock, toms, dinámica). |
 | **Mejorar kit** | Elige el teclado destino y mejora todo: limpieza, procesado por pieza (bombo, caja, toms, hi-hat, ride, crash), balance, afinación de toms, corte de hi-hat, filtro y capas de velocidad ligeras. Controla la memoria de cada modelo. |
@@ -87,6 +88,7 @@ python ppf_tester/qt_main.py
 
 ```powershell
 python ppf_tester/ppf_tester.py analizar MI_KIT.ppf --abrir
+python ppf_tester/ppf_tester.py importar "C:\Mis WAV\Real Drums" --modelo S670
 python ppf_tester/ppf_tester.py mejorar  MI_KIT.ppf --modelo S670
 python ppf_tester/ppf_tester.py corregir MI_KIT.ppf --agrupar-hihat
 python ppf_tester/ppf_tester.py extraer  MI_KIT.ppf

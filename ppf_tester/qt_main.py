@@ -137,7 +137,7 @@ class EmptyPage(QWidget):
         l.setSpacing(12)
         lg = Logo(84)
         l.addWidget(lg, 0, Qt.AlignmentFlag.AlignHCenter)
-        t = QLabel("Arrastra aquí tu kit .ppf")
+        t = QLabel("Arrastra aquí tu kit .ppf o una carpeta de WAV")
         t.setStyleSheet("font-size: 20pt; font-weight: 300; background: transparent;")
         t.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(t)
@@ -149,8 +149,16 @@ class EmptyPage(QWidget):
         b = btn("Abrir archivo .ppf", "folder", primary=True)
         b.setFixedWidth(240)
         b.clicked.connect(lambda: ctx.open_file())
+        b2 = btn("Crear kit desde mis WAV", "sparkle")
+        b2.setFixedWidth(240)
+        b2.clicked.connect(lambda: ctx.go("import"))
         l.addSpacing(8)
-        l.addWidget(b, 0, Qt.AlignmentFlag.AlignHCenter)
+        rowb = QHBoxLayout()
+        rowb.addStretch(1)
+        rowb.addWidget(b)
+        rowb.addWidget(b2)
+        rowb.addStretch(1)
+        l.addLayout(rowb)
         l.addSpacing(10)
         self.rec_cap = caption("Recientes")
         self.rec_cap.setStyleSheet("background: transparent;")
@@ -253,7 +261,7 @@ class SettingsDialog(QDialog):
 
 
 # ================================================================ ventana
-NAV = [("samples", "Muestras", "wave"), ("listen", "Escuchar", "headphones"), ("improve", "Mejorar kit", "sparkle"),
+NAV = [("import", "Importar WAV", "folder"), ("samples", "Muestras", "wave"), ("listen", "Escuchar", "headphones"), ("improve", "Mejorar kit", "sparkle"),
        ("review", "Revisión", "check"), ("keyboard", "Teclado", "piano")]
 
 
@@ -417,7 +425,9 @@ class MainWindow(QMainWindow):
         self.listen = ListenPage(self)
         self.improve = ImprovePage(self)
         self.review = ReviewPage(self)
-        self.pages = {"samples": self.samples, "listen": self.listen, "improve": self.improve,
+        from qt_import import ImportPage
+        self.importer = ImportPage(self)
+        self.pages = {"import": self.importer, "samples": self.samples, "listen": self.listen, "improve": self.improve,
                       "review": self.review, "keyboard": self.keyboard}
         for p in self.pages.values():
             self.stack.addWidget(p)
@@ -445,22 +455,23 @@ class MainWindow(QMainWindow):
         self.logo.update()
 
     def _set_loaded(self, on):
-        for b in self.nav.values():
-            b.setEnabled(on)
+        for k, b in self.nav.items():
+            b.setEnabled(on or k == "import")
         for b in (self.b_save, self.b_rep, self.b_wav):
             b.setEnabled(on)
-        self.stats.setVisible(on)
-        if not on:
+        self.stats.setVisible(on and self.current_key() != "import")
+        if not on and self.current_key() != "import":
             self.stack.fade_to(0)
             self.indicator.hide()
 
     def go(self, key):
-        if self.pack is None:
+        if self.pack is None and key != "import":
             return
         page = self.pages[key]
         self.stack.fade_to(self.stack.indexOf(page))
         for k, b in self.nav.items():
             b.setChecked(k == key)
+        self.stats.setVisible(self.pack is not None and key != "import")
         self.h_title.setText(page.title)
         self.h_sub.setText(page.subtitle)
         target = self.nav[key].geometry()
@@ -618,7 +629,10 @@ class MainWindow(QMainWindow):
 
     # ---------------------------------------------------------------- arrastrar
     def dragEnterEvent(self, e):
-        if e.mimeData().hasUrls() and any(u.toLocalFile().lower().endswith(".ppf") for u in e.mimeData().urls()):
+        if e.mimeData().hasUrls() and any(u.toLocalFile().lower().endswith((".ppf", ".wav")) or os.path.isdir(u.toLocalFile())
+                                          for u in e.mimeData().urls()):
+            es_ppf = any(u.toLocalFile().lower().endswith(".ppf") for u in e.mimeData().urls())
+            self.drop_hint.setText("Suelta para abrir el kit" if es_ppf else "Suelta la carpeta para crear un kit con tus WAV")
             e.acceptProposedAction()
             self.drop_hint.setGeometry(self.bg.rect().adjusted(40, 40, -40, -40))
             self.drop_hint.raise_()
@@ -633,6 +647,10 @@ class MainWindow(QMainWindow):
             f = u.toLocalFile()
             if f.lower().endswith(".ppf"):
                 self.open_file(f)
+                break
+            if os.path.isdir(f) or f.lower().endswith(".wav"):
+                self.go("import")
+                self.importer.load_folder(f if os.path.isdir(f) else os.path.dirname(f))
                 break
 
     # ---------------------------------------------------------------- teclado

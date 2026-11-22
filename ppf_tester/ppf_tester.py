@@ -191,6 +191,29 @@ def cmd_mejorar(a):
     print(f"\nGuardado: {out}")
 
 
+def cmd_importar(a):
+    import importar_wav as I
+    import modelos
+    modelo = a.modelo if a.modelo.startswith("PSR-") else "PSR-" + a.modelo.upper()
+    if modelo not in modelos.MODELOS:
+        sys.exit("Modelo desconocido. Usa: " + ", ".join(modelos.MODELOS))
+    carpeta = a.carpeta.rstrip("\\/")
+    nombre = a.nombre or os.path.basename(carpeta)[:20]
+    out = a.salida or os.path.join(os.path.dirname(carpeta), f"{nombre}_{modelo[4:]}.ppf")
+    op = I.OpcionesImport(nombre=nombre, modelo=modelo, procesar=not a.sin_procesar, intensidad=a.intensidad / 100)
+    archivos, grupos, plan, pack = I.crear_kit(carpeta, out, op, log=lambda s: None)
+    print(f"{len(archivos)} WAV · {sum(1 for x in archivos if x.excluido)} ignorados · {len(grupos)} grupos")
+    for p in sorted(plan.piezas, key=lambda p: p.nota):
+        if p.usar:
+            extra = f" afin={p.afinacion:+d}" if p.afinacion else ""
+            print(f"  {I.nombre_tecla(p.nota):<26} {p.nombre:<20} capas={len(plan.capas[p.nota])}{extra}")
+    if plan.pasos:
+        print("Ajustes de memoria: " + ", ".join(plan.pasos))
+    if pack.errors:
+        sys.exit("El archivo creado no pasó la verificación: " + "; ".join(pack.errors))
+    print(f"\nKit: {out}  ({plan.mb:.2f} MB para {modelo})")
+
+
 def cmd_puertos(a):
     import midi_test as M
     print("Salidas MIDI:")
@@ -322,6 +345,15 @@ def main(argv=None):
     s.add_argument("--sin-filtro", action="store_true", help="No abrir el filtro paso-bajo de la voz")
     s.add_argument("--salida")
     s.set_defaults(f=cmd_mejorar)
+
+    s = sub.add_parser("importar", help="Crea un kit .ppf desde una carpeta de WAV.")
+    s.add_argument("carpeta")
+    s.add_argument("--modelo", default="S670", help="S670, S770, S775, S970 o S975")
+    s.add_argument("--nombre", help="Nombre del kit (máx. 20 caracteres)")
+    s.add_argument("--intensidad", type=float, default=50, help="Mejora por pieza 0-150 (%%)")
+    s.add_argument("--sin-procesar", action="store_true", help="No aplicar la mejora por pieza")
+    s.add_argument("--salida")
+    s.set_defaults(f=cmd_importar)
 
     s = sub.add_parser("puertos", help="Lista puertos MIDI y entradas de audio.")
     s.set_defaults(f=cmd_puertos)
