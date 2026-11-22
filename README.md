@@ -17,22 +17,39 @@
 </p>
 
 <p align="center">
-  <img src="docs/muestras.jpg" width="820" alt="Pestaña Muestras">
+  <img src="docs/samples.jpg" width="860" alt="Muestras">
+</p>
+
+## Novedades de la versión 3
+
+- Interfaz nueva en **Qt**: barra lateral, tarjetas, transiciones suaves y tipografía cuidada.
+- **Fondo animado estilo worship**: luces de escenario que se mueven y respiran, rayos de luz y partículas
+  que **laten con la música** cuando tocas el kit (se puede desactivar en Ajustes).
+- Pantalla de bienvenida, **arrastrar y soltar** archivos `.ppf`, archivos recientes y avisos discretos.
+- Piano que brilla al sonar, medidores de nivel y barras de memoria por modelo.
+- Aviso automático cuando hay una versión nueva en GitHub.
+
+<p align="center">
+  <img src="docs/empty.jpg" width="860" alt="Bienvenida">
 </p>
 
 ## Qué hace
 
 | | |
 |---|---|
-| **Muestras** | Teclado con el estado de cada tecla, forma de onda, espectro, medidas (pico, RMS, DC, silencios) y editor por tecla (afinación, volumen, paneo, filtro, grupo de corte). Reemplaza una muestra por un WAV. |
+| **Muestras** | Piano con el estado de cada tecla, forma de onda, espectro, medidas (pico, RMS, DC, silencios) y editor por tecla (afinación, volumen, paneo, filtro, grupo de corte). Reemplaza una muestra por un WAV. |
 | **Escuchar** | Toca el kit con el ratón o el teclado del PC: *simulación del PSR* (curva de velocidad, filtro, paneo, reverb), *PSR real por MIDI* (sonido exacto, con monitor y grabación) o la *muestra original*. Comparación A/B y ritmos de prueba (balada, worship 6/8, pop, rock, toms, dinámica). |
 | **Mejorar kit** | Elige el teclado destino y mejora todo: limpieza, procesado por pieza (bombo, caja, toms, hi-hat, ride, crash), balance, afinación de toms, corte de hi-hat, filtro y capas de velocidad ligeras. Controla la memoria de cada modelo. |
 | **Revisión** | Huecos de velocidad, muestras repetidas, estéreo falso, hi-hat sin corte, balance del kit. |
 | **Prueba en el teclado** | Toca todas las notas en el PSR por USB-MIDI, graba la salida y detecta notas mudas, retardos y dinámica incorrecta. |
 
 <p align="center">
-  <img src="docs/escuchar.jpg" width="410" alt="Escuchar">
-  <img src="docs/mejorar.jpg" width="410" alt="Mejorar kit">
+  <img src="docs/listen.jpg" width="425" alt="Escuchar">
+  <img src="docs/improve.jpg" width="425" alt="Mejorar kit">
+</p>
+<p align="center">
+  <img src="docs/review.jpg" width="425" alt="Revisión">
+  <img src="docs/about.jpg" width="300" alt="Acerca de">
 </p>
 
 ## Memoria de expansión por modelo
@@ -48,7 +65,7 @@
 ## Descarga (recomendado)
 
 1. Ve a **[Releases](https://github.com/angel-cm-dev/ppf-tester/releases/latest)** y descarga **`PPF-Tester.exe`**.
-2. Ábrelo. No necesitas instalar Python ni nada más.
+2. Ábrelo. No necesitas instalar Python ni nada más (≈ 52 MB, Windows 10/11).
 
 > Windows SmartScreen puede avisar la primera vez porque el ejecutable no está firmado:
 > pulsa **“Más información” → “Ejecutar de todas formas”**.
@@ -56,14 +73,14 @@
 ## Ejecutar desde el código
 
 1. Instala [Python 3.10 o superior](https://www.python.org/downloads/) marcando **“Add Python to PATH”**.
-2. Descarga este repositorio y haz doble clic en **`Instalar.bat`** (instala `numpy` y `sounddevice`).
+2. Descarga este repositorio y haz doble clic en **`Instalar.bat`** (instala `numpy`, `sounddevice` y `PySide6`).
 3. Abre el programa con **`PPF Tester.bat`**.
 
 O desde la consola:
 
 ```powershell
 pip install -r requirements.txt
-python ppf_tester/app.py
+python ppf_tester/qt_main.py
 ```
 
 ## Línea de comandos

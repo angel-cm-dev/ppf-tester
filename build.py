@@ -49,9 +49,12 @@ def main():
         "--distpath", os.path.join(ROOT, "dist"), "--workpath", build, "--specpath", build,
         # módulos que no se usan (reduce tamaño)
         *[a for m in ("scipy", "matplotlib", "PIL", "pandas", "IPython", "pytest", "setuptools",
-                      "xmlrpc", "lib2to3", "sqlite3", "curses")
+                      "xmlrpc", "lib2to3", "sqlite3", "curses", "tkinter",
+                      "PySide6.QtNetwork", "PySide6.QtQml", "PySide6.QtQuick", "PySide6.QtWebEngineCore",
+                      "PySide6.QtMultimedia", "PySide6.QtPdf", "PySide6.QtSql", "PySide6.QtTest",
+                      "PySide6.QtOpenGL", "PySide6.QtSvg", "PySide6.QtDBus")
           for a in ("--exclude-module", m)],
-        os.path.join(SRC, "app.py"),
+        os.path.join(SRC, "qt_main.py"),
     ]
     print(" ".join(args))
     subprocess.check_call(args)
