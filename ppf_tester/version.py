@@ -1,0 +1,5 @@
+"""Versión de PPF Tester (única fuente)."""
+__version__ = "2.0.0"
+AUTOR = "Angel Cm"
+WEB = "https://angelcm.com"
+REPO = "https://github.com/angel-cm-dev/ppf-tester"

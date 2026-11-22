@@ -1,0 +1,24 @@
+# Entorno
+build/
+dist/
+*.spec
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Muestras, packs y archivos generados (no subir audio con derechos)
+ejemplo/
+*.ppf
+*.ppi
+*.cpi
+*.cpf
+*.wav
+*_wav/
+*_grabacion/
+*_informe.html
+*_prueba_teclado.html
+
+# Sistema
+Thumbs.db
+.DS_Store
