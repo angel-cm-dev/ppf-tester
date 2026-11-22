@@ -124,6 +124,10 @@ Contenedor `XPFH` con bloques `TAG + longitud (big-endian)` alineados a 4 bytes.
 con `EUID`, `ETIT`, `EEXT` (`uvf` = voz en XML, `APCp` = onda) y `FBIN`. Las ondas son AIFF tipo `YTWV`
 (PCM 16 bits) y su `EUID` es el SHA-1 del contenido; el programa lo recalcula al modificar una muestra.
 
+## Próximas mejoras
+
+Una mejora nueva cada día: mira la [hoja de ruta](ROADMAP.md).
+
 ## Licencia
 
 [MIT](LICENSE) © 2026 [Angel Cm](https://angelcm.com). Puedes usarlo, modificarlo y compartirlo manteniendo el aviso de autoría.
