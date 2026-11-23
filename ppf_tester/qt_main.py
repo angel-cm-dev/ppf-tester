@@ -40,6 +40,20 @@ BASE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 
 
 # =============================================================== utilidades
+def abrir_carpeta(path: str):
+    """Abre una carpeta o archivo con la aplicación del sistema (Windows, macOS o Linux)."""
+    import subprocess
+    try:
+        if sys.platform == "win32":
+            os.startfile(path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+    except OSError as e:
+        registro.log.warning("No se pudo abrir %s: %s", path, e)
+
+
 class Bridge(QObject):
     """Lleva resultados de hilos de fondo al hilo de la interfaz."""
     sig = Signal(object, object)
@@ -276,7 +290,7 @@ class SettingsDialog(QDialog):
         tools = hbox(None, 0, 8)
         for txt, ic, fn in (("Buscar actualizaciones", "refresh", lambda: parent.check_updates(manual=True)),
                             ("Reportar un problema", "github", lambda: webbrowser.open(registro.url_reporte(REPO, VERSION))),
-                            ("Abrir registros", "folder", lambda: os.startfile(registro.CARPETA) if sys.platform == "win32" else None)):
+                            ("Abrir registros", "folder", lambda: abrir_carpeta(registro.CARPETA))):
             b = btn(txt, ic)
             b.clicked.connect(fn)
             tools.addWidget(b)
@@ -292,8 +306,11 @@ class SettingsDialog(QDialog):
 
 
 # ================================================================ ventana
-NAV = [("import", "Importar WAV", "folder"), ("samples", "Muestras", "wave"), ("listen", "Escuchar", "headphones"), ("improve", "Mejorar kit", "sparkle"),
-       ("review", "Revisión", "check"), ("keyboard", "Teclado", "piano")]
+NAV = [("import", "Importar WAV", "folder"), ("library", "Biblioteca", "library"), ("voices", "Voces y pads", "music"),
+       ("samples", "Muestras", "wave"), ("listen", "Escuchar", "headphones"), ("live", "En vivo", "pads"),
+       ("improve", "Mejorar kit", "sparkle"), ("review", "Revisión", "check"), ("keyboard", "Teclado", "piano"),
+       ("set", "Set del teclado", "stack")]
+SIN_PACK = {"import", "library", "voices", "set"}     # páginas que no necesitan un kit abierto
 
 
 class MainWindow(QMainWindow):
@@ -311,6 +328,18 @@ class MainWindow(QMainWindow):
         self.modified = False
         self.undo_stack, self.redo_stack = [], []
         self.setAcceptDrops(True)
+        # La recolección de basura de Python solo en el hilo de la interfaz: si un hilo de fondo
+        # libera objetos de Qt (widgets ya descartados) la app puede cerrarse de golpe.
+        import gc
+        gc.disable()
+        self._gc_n = 0
+
+        def _gc():
+            self._gc_n += 1
+            gc.collect(2 if self._gc_n % 20 == 0 else 0)
+        self._gc_timer = QTimer(self)
+        self._gc_timer.timeout.connect(_gc)
+        self._gc_timer.start(500)
         self.resize(1440, 900)
         self.setMinimumSize(1180, 760)
         self._build()
@@ -366,7 +395,7 @@ class MainWindow(QMainWindow):
             b.setIcon(icon(ic, "fg", 18))
             b.setCheckable(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
-            b.setStyleSheet("QPushButton { text-align: left; background: transparent; border: none; padding: 11px 14px;"
+            b.setStyleSheet("QPushButton { text-align: left; background: transparent; border: none; padding: 9px 14px;"
                             f" color: {C['mut']}; font-size: 10.5pt; border-radius: 8px; }}"
                             "QPushButton:hover { color: #ffffff; background: rgba(255,255,255,10); }"
                             f"QPushButton:checked {{ color: {C['fg']}; font-weight: 600; }}"
@@ -458,9 +487,15 @@ class MainWindow(QMainWindow):
         self.improve = ImprovePage(self)
         self.review = ReviewPage(self)
         from qt_import import ImportPage
+        from qt_pages3 import LibraryPage, LivePage, SetPage, VoicesPage
         self.importer = ImportPage(self)
-        self.pages = {"import": self.importer, "samples": self.samples, "listen": self.listen, "improve": self.improve,
-                      "review": self.review, "keyboard": self.keyboard}
+        self.library = LibraryPage(self)
+        self.voices = VoicesPage(self)
+        self.live = LivePage(self)
+        self.set_page = SetPage(self)
+        self.pages = {"import": self.importer, "library": self.library, "voices": self.voices, "samples": self.samples,
+                      "listen": self.listen, "live": self.live, "improve": self.improve, "review": self.review,
+                      "keyboard": self.keyboard, "set": self.set_page}
         for p in self.pages.values():
             self.stack.addWidget(p)
         ml.addWidget(self.stack, 1)
@@ -477,8 +512,9 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence.StandardKey.Save, self, activated=self.save_as)
         QShortcut(QKeySequence.StandardKey.Undo, self, activated=self.undo)
         QShortcut(QKeySequence("Ctrl+Y"), self, activated=self.redo)
+        QShortcut(QKeySequence("F11"), self, activated=self.toggle_fullscreen)
         QShortcut(QKeySequence.StandardKey.Redo, self, activated=self.redo)
-        for i, (key, _, _) in enumerate(NAV):
+        for i, (key, _, _) in enumerate(NAV[:9]):
             QShortcut(QKeySequence(f"Ctrl+{i + 1}"), self, activated=lambda k=key: self.go(k))
         traducir_arbol(self)
         self.logo_timer = QTimer(self)
@@ -492,22 +528,22 @@ class MainWindow(QMainWindow):
 
     def _set_loaded(self, on):
         for k, b in self.nav.items():
-            b.setEnabled(on or k == "import")
+            b.setEnabled(on or k in SIN_PACK)
         for b in (self.b_save, self.b_rep, self.b_wav):
             b.setEnabled(on)
-        self.stats.setVisible(on and self.current_key() != "import")
-        if not on and self.current_key() != "import":
+        self.stats.setVisible(on and self.current_key() not in SIN_PACK)
+        if not on and self.current_key() not in SIN_PACK:
             self.stack.fade_to(0)
             self.indicator.hide()
 
     def go(self, key):
-        if self.pack is None and key != "import":
+        if self.pack is None and key not in SIN_PACK:
             return
         page = self.pages[key]
         self.stack.fade_to(self.stack.indexOf(page))
         for k, b in self.nav.items():
             b.setChecked(k == key)
-        self.stats.setVisible(self.pack is not None and key != "import")
+        self.stats.setVisible(self.pack is not None and key not in SIN_PACK)
         self.h_title.setText(tr(page.title))
         self.h_sub.setText(tr(page.subtitle))
         traducir_arbol(page)
@@ -525,6 +561,8 @@ class MainWindow(QMainWindow):
             self._ind_anim = a
         if key != "listen":
             self.listen.stop_groove()
+        if key != "live":
+            self.live.stop()
 
     def current_key(self):
         w = self.stack.currentWidget()
@@ -697,8 +735,7 @@ class MainWindow(QMainWindow):
 
         def done(f):
             self.toast(f"{len(pack.waves)} WAV exportados", "OK")
-            if sys.platform == "win32":
-                os.startfile(f)
+            abrir_carpeta(f)
         self.run_bg(job, done)
 
     def add_recent(self, path):
@@ -742,7 +779,19 @@ class MainWindow(QMainWindow):
         if self.current_key() == "listen" and self.listen.key_press(e):
             e.accept()
             return
+        if self.current_key() == "live" and self.live.key_press(e):
+            e.accept()
+            return
+        if e.key() == Qt.Key.Key_Escape and self.isFullScreen():
+            self.toggle_fullscreen()
+            return
         super().keyPressEvent(e)
+
+    def toggle_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
 
     # ---------------------------------------------------------------- extras
     def about(self):
@@ -808,7 +857,7 @@ class MainWindow(QMainWindow):
         tag = data.get("tag_name", "")
         url = data.get("html_url", REPO + "/releases/latest")
         asset = next((a for a in data.get("assets", []) if a.get("name") == "PPF-Tester.exe"), None)
-        if not getattr(sys, "frozen", False) or asset is None:
+        if not getattr(sys, "frozen", False) or asset is None or sys.platform != "win32":
             webbrowser.open(url)        # versión de código: abrir la página de descargas
             return
         if QMessageBox.question(self, APP, f"¿Descargar e instalar PPF Tester {tag}?\n\nLa app se cerrará y se abrirá la versión nueva.") != QMessageBox.StandardButton.Yes:

@@ -1,6 +1,6 @@
 """Prueba en el teclado real: envia notas por USB-MIDI y graba lo que suena.
 
-MIDI: usa la API de Windows (winmm) directamente, sin librerias extra.
+MIDI: en Windows usa la API winmm directamente; en macOS/Linux, python-rtmidi.
 Audio: usa 'sounddevice' (pip install sounddevice) para grabar la salida del
 teclado a traves de una interfaz de audio o la entrada de linea del PC.
 """
@@ -10,7 +10,6 @@ import ctypes
 import sys
 import threading
 import time
-from ctypes import wintypes
 from dataclasses import dataclass
 
 import numpy as np
@@ -19,20 +18,43 @@ import analisis as A
 from ppf_format import note_name
 
 
-# ------------------------------------------------------------ MIDI (winmm)
-class MIDIOUTCAPSW(ctypes.Structure):
-    _fields_ = [("wMid", wintypes.WORD), ("wPid", wintypes.WORD), ("vDriverVersion", wintypes.UINT),
-                ("szPname", wintypes.WCHAR * 32), ("wTechnology", wintypes.WORD), ("wVoices", wintypes.WORD),
-                ("wNotes", wintypes.WORD), ("wChannelMask", wintypes.WORD), ("dwSupport", wintypes.DWORD)]
+# ------------------------------------------------------------ MIDI
+# Windows: API winmm directa (sin librerías). macOS/Linux: python-rtmidi (CoreMIDI/ALSA).
+WIN = sys.platform == "win32"
+if WIN:
+    from ctypes import wintypes
+
+    class MIDIOUTCAPSW(ctypes.Structure):
+        _fields_ = [("wMid", wintypes.WORD), ("wPid", wintypes.WORD), ("vDriverVersion", wintypes.UINT),
+                    ("szPname", wintypes.WCHAR * 32), ("wTechnology", wintypes.WORD), ("wVoices", wintypes.WORD),
+                    ("wNotes", wintypes.WORD), ("wChannelMask", wintypes.WORD), ("dwSupport", wintypes.DWORD)]
+
+    class MIDIINCAPSW(ctypes.Structure):
+        _fields_ = [("wMid", wintypes.WORD), ("wPid", wintypes.WORD), ("vDriverVersion", wintypes.UINT),
+                    ("szPname", wintypes.WCHAR * 32), ("dwSupport", wintypes.DWORD)]
+
+    _MidiInProc = ctypes.WINFUNCTYPE(None, wintypes.HANDLE, wintypes.UINT, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t)
 
 
 def _winmm():
-    if sys.platform != "win32":
-        raise RuntimeError("La prueba MIDI solo está implementada para Windows.")
     return ctypes.windll.winmm
 
 
+def _rtmidi():
+    try:
+        import rtmidi
+    except ImportError as e:
+        raise RuntimeError("Para usar MIDI en este sistema instala python-rtmidi (pip install python-rtmidi).") from e
+    return rtmidi
+
+
 def midi_outputs() -> list[str]:
+    if not WIN:
+        try:
+            m = _rtmidi().MidiOut()
+            return list(m.get_ports())
+        except RuntimeError:
+            return []
     mm = _winmm()
     out = []
     for i in range(mm.midiOutGetNumDevs()):
@@ -50,12 +72,12 @@ def find_keyboard_port() -> int | None:
     return None
 
 
-class MIDIINCAPSW(ctypes.Structure):
-    _fields_ = [("wMid", wintypes.WORD), ("wPid", wintypes.WORD), ("vDriverVersion", wintypes.UINT),
-                ("szPname", wintypes.WCHAR * 32), ("dwSupport", wintypes.DWORD)]
-
-
 def midi_inputs() -> list[str]:
+    if not WIN:
+        try:
+            return list(_rtmidi().MidiIn().get_ports())
+        except RuntimeError:
+            return []
     mm = _winmm()
     out = []
     for i in range(mm.midiInGetNumDevs()):
@@ -65,25 +87,34 @@ def midi_inputs() -> list[str]:
     return out
 
 
-_MidiInProc = ctypes.WINFUNCTYPE(None, wintypes.HANDLE, wintypes.UINT, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t)
+def _despachar(st, d1, d2, on_note, on_off):
+    tipo = st & 0xF0
+    try:
+        if tipo == 0x90 and d2 > 0:
+            on_note(d1, d2)
+        elif on_off is not None and (tipo == 0x80 or (tipo == 0x90 and d2 == 0)):
+            on_off(d1)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 class MidiIn:
-    """Entrada MIDI (teclado controlador o el propio PSR). on_note(nota, velocidad) se llama desde otro hilo."""
+    """Entrada MIDI (teclado controlador o el propio PSR).
+    on_note(nota, velocidad) y on_off(nota) se llaman desde otro hilo."""
 
-    def __init__(self, port: int, on_note):
+    def __init__(self, port: int, on_note, on_off=None):
+        self.on_note, self.on_off = on_note, on_off
+        if not WIN:
+            self._rt = _rtmidi().MidiIn()
+            self._rt.open_port(port)
+            self._rt.set_callback(lambda ev, _d: _despachar(*(list(ev[0]) + [0, 0])[:3], self.on_note, self.on_off))
+            return
         self.mm = _winmm()
-        self.on_note = on_note
         self.h = wintypes.HANDLE()
 
         def proc(h, msg, inst, p1, p2):
             if msg == 0x3C3:                      # MIM_DATA
-                st, d1, d2 = p1 & 0xFF, (p1 >> 8) & 0x7F, (p1 >> 16) & 0x7F
-                if st & 0xF0 == 0x90 and d2 > 0:
-                    try:
-                        self.on_note(d1, d2)
-                    except Exception:  # noqa: BLE001
-                        pass
+                _despachar(p1 & 0xFF, (p1 >> 8) & 0x7F, (p1 >> 16) & 0x7F, self.on_note, self.on_off)
 
         self._cb = _MidiInProc(proc)              # mantener la referencia viva
         r = self.mm.midiInOpen(ctypes.byref(self.h), port, ctypes.cast(self._cb, ctypes.c_void_p), 0, 0x30000)
@@ -93,6 +124,9 @@ class MidiIn:
 
     def close(self):
         try:
+            if not WIN:
+                self._rt.close_port()
+                return
             self.mm.midiInStop(self.h)
             self.mm.midiInReset(self.h)
             self.mm.midiInClose(self.h)
@@ -102,6 +136,10 @@ class MidiIn:
 
 class MidiOut:
     def __init__(self, port: int):
+        if not WIN:
+            self._rt = _rtmidi().MidiOut()
+            self._rt.open_port(port)
+            return
         self.mm = _winmm()
         self.h = wintypes.HANDLE()
         r = self.mm.midiOutOpen(ctypes.byref(self.h), port, 0, 0, 0)
@@ -109,6 +147,9 @@ class MidiOut:
             raise RuntimeError(f"No se pudo abrir el puerto MIDI {port} (código {r}). ¿Lo está usando otro programa?")
 
     def send(self, status: int, d1: int = 0, d2: int = 0):
+        if not WIN:
+            self._rt.send_message([status & 0xFF, d1 & 0x7F, d2 & 0x7F])
+            return
         self.mm.midiOutShortMsg(self.h, status | (d1 << 8) | (d2 << 16))
 
     def note(self, ch: int, note: int, vel: int):
@@ -121,6 +162,9 @@ class MidiOut:
         self.send(0xB0 | (ch - 1), 123, 0)
 
     def close(self):
+        if not WIN:
+            self._rt.close_port()
+            return
         self.mm.midiOutReset(self.h)
         self.mm.midiOutClose(self.h)
 

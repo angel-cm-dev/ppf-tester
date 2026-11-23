@@ -573,12 +573,29 @@ class ReviewPage(Page):
             self.tiles[k] = v
             top.addWidget(c)
         root.addLayout(top)
+        mid = hbox(None, 0, 14)
         c = card()
         l = vbox(c, 18, 8)
         l.addWidget(caption("Kit"))
         self.kit = text_view(120)
         l.addWidget(self.kit)
-        root.addWidget(c, 1)
+        mid.addWidget(c, 2)
+        cc = card()
+        lc = vbox(cc, 18, 8)
+        rowc = hbox(None, 0, 8)
+        rowc.addWidget(caption("Compatibilidad por modelo"))
+        rowc.addStretch(1)
+        b_em = btn("Expansion Manager", "export", primary=True, tip="Abre este kit en Yamaha Expansion Manager")
+        b_em.clicked.connect(self.open_em)
+        rowc.addWidget(b_em)
+        b_how = btn("Instalar en el PSR", "info")
+        b_how.clicked.connect(self.how_install)
+        rowc.addWidget(b_how)
+        lc.addLayout(rowc)
+        self.compat = text_view(120)
+        lc.addWidget(self.compat)
+        mid.addWidget(cc, 3)
+        root.addLayout(mid, 1)
         c3 = card()
         l3 = vbox(c3, 18, 8)
         rowr = hbox(None, 0, 8)
@@ -613,6 +630,35 @@ class ReviewPage(Page):
             if w.problems:
                 parts.append(f"<p style='margin:10px 0 2px 0; font-weight:700'>{w.name}</p>" + problems_html(w.problems))
         self.samples.setHtml("".join(parts) or problems_html([], "Todas las muestras están bien."))
+        import compat
+        rows = []
+        for r in compat.revisar(pack):
+            col = LV_COLOR.get(r.estado, C["fg"])
+            rows.append(f"<tr><td style='padding:4px 12px 4px 0; font-weight:700; white-space:nowrap'>{r.modelo}</td>"
+                        f"<td style='padding:4px 12px 4px 0; color:{col}; white-space:nowrap'>{r.resumen}</td>"
+                        f"<td style='padding:4px 0'>{'<br>'.join(r.detalles)}</td></tr>")
+        self.compat.setHtml("<table cellspacing=0>" + "".join(rows) + "</table>"
+                            f"<p style='color:{C['mut']}'>Según la memoria de cada modelo y lo recomendado para que el kit suene bien. "
+                            "Pruébalo siempre en el teclado.</p>")
+
+    def open_em(self):
+        import compat
+        if self.ctx.modified and QMessageBox.question(self, "PPF Tester", "Hay cambios sin guardar: Expansion Manager abrirá el archivo "
+                                                      "guardado. ¿Continuar?") != QMessageBox.StandardButton.Yes:
+            return
+        ok, msg = compat.abrir_em(self.ctx.pack.path if self.ctx.pack else None)
+        if ok and self.ctx.pack:
+            from PySide6.QtWidgets import QApplication
+            QApplication.clipboard().setText(self.ctx.pack.path)
+            msg += " (la ruta del .ppf quedó copiada)"
+        self.ctx.toast(msg, "OK" if ok else "AVISO", 6000)
+
+    def how_install(self):
+        import compat
+        QMessageBox.information(self, "Instalar en el PSR", "Cómo pasar el kit al teclado:\n\n" +
+                                "\n".join(f"{i + 1}. {p}" for i, p in enumerate(compat.PASOS_EM)) +
+                                "\n\nEl archivo de instalación lo crea Expansion Manager porque va cifrado para tu teclado; "
+                                "esta app prepara y revisa el .ppf.")
 
     def compare_ref(self):
         import referencia
@@ -673,6 +719,10 @@ class KeyboardPage(Page):
         b_ref = btn("Buscar dispositivos", "refresh")
         b_ref.clicked.connect(self.refresh)
         g.addWidget(b_ref, 2, 4)
+        b_wiz = btn("Asistente paso a paso", "sparkle")
+        b_wiz.setToolTip("Te guía para conectar el PSR, comprobar MIDI y audio, probar el kit y calibrar")
+        b_wiz.clicked.connect(self.wizard)
+        g.addWidget(b_wiz, 3, 4)
         self.b_test = btn("Iniciar prueba", "play", primary=True)
         self.b_test.clicked.connect(self.run)
         g.addWidget(self.b_test, 4, 4)
@@ -724,6 +774,12 @@ class KeyboardPage(Page):
         except Exception:  # noqa: BLE001
             self.cb_in.clear()
             self.cb_in.addItem("(instala sounddevice para grabar)")
+
+    def wizard(self):
+        if self.ctx.pack is None:
+            return
+        from qt_pages3 import PsrWizard
+        PsrWizard(self.ctx).exec()
 
     def midi_port(self):
         s = self.cb_midi.currentText()

@@ -14,11 +14,26 @@
   <a href="https://github.com/angel-cm-dev/ppf-tester/releases/latest"><img alt="Descargar" src="https://img.shields.io/github/v/release/angel-cm-dev/ppf-tester?label=descargar&color=f4b860&style=for-the-badge"></a>
   <a href="LICENSE"><img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-ec6f7f?style=for-the-badge"></a>
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-8b6cff?style=for-the-badge">
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-Apple%20Silicon-5aa9ff?style=for-the-badge">
 </p>
 
 <p align="center">
   <img src="docs/samples.jpg" width="860" alt="Muestras">
 </p>
+
+## Novedades de la versión 5
+
+- **Sonido**: mezcla de micrófonos (cercano / overheads / sala) en kits multi-micrófono, **sala integrada**,
+  capas suaves con un modelo de timbre por velocidad, **nivel como los kits del teclado** y detección y
+  corrección de **fase** en muestras estéreo.
+- **Compatibilidad por modelo** (S670 a S975) y botón para **abrir el kit en Expansion Manager**, con los pasos
+  para instalarlo en el PSR.
+- **Biblioteca de muestras** (búsqueda, etiquetas, favoritos) y **kits desde cero** con tus golpes guardados.
+- **Set del teclado**: varios packs a la vez contra la memoria de tu PSR, y **comparar dos versiones** de un kit
+  (qué cambió en cada tecla, con A/B).
+- **Voces y pads**: voces melódicas multisample (detecta la nota de cada WAV) y **pads con loop sin clics**.
+- **Modo En vivo** con pads grandes, **demos en MP3** para WhatsApp y **asistente paso a paso** para probar en el PSR.
+- **Versión para Mac** (Apple Silicon).
 
 ## Novedades de la versión 4
 
@@ -51,7 +66,11 @@
 | **Muestras** | Piano con el estado de cada tecla, forma de onda, espectro, medidas (pico, RMS, DC, silencios) y editor por tecla (afinación, volumen, paneo, filtro, grupo de corte). Reemplaza una muestra por un WAV. |
 | **Escuchar** | Toca el kit con el ratón o el teclado del PC: *simulación del PSR* (curva de velocidad, filtro, paneo, reverb), *PSR real por MIDI* (sonido exacto, con monitor y grabación) o la *muestra original*. Comparación A/B y ritmos de prueba (balada, worship 6/8, pop, rock, toms, dinámica). |
 | **Mejorar kit** | Elige el teclado destino y mejora todo: limpieza, procesado por pieza (bombo, caja, toms, hi-hat, ride, crash), balance, afinación de toms, corte de hi-hat, filtro y capas de velocidad ligeras. Controla la memoria de cada modelo. |
-| **Revisión** | Huecos de velocidad, muestras repetidas, estéreo falso, hi-hat sin corte, balance del kit. |
+| **Revisión** | Huecos de velocidad, muestras repetidas, estéreo falso, fase, hi-hat sin corte, balance y compatibilidad con cada modelo. Abre el kit en Expansion Manager. |
+| **Biblioteca** | Guarda tus mejores golpes, búscalos por nombre, pieza o etiqueta y arma kits nuevos desde cero. |
+| **Voces y pads** | Pianos, cuerdas o pads desde tus WAV: detecta la nota de cada muestra, reparte el teclado y crea loops sin clics. |
+| **En vivo** | Pads grandes para el ensayo (ratón, teclado del PC o MIDI), ritmos y pantalla completa. Exporta una demo en MP3. |
+| **Set del teclado** | Comprueba si todos tus packs caben juntos en la memoria del PSR y compara dos versiones de un kit. |
 | **Prueba en el teclado** | Toca todas las notas en el PSR por USB-MIDI, graba la salida y detecta notas mudas, retardos y dinámica incorrecta. |
 
 <p align="center">
@@ -77,15 +96,20 @@
 
 1. Ve a **[Releases](https://github.com/angel-cm-dev/ppf-tester/releases/latest)** y descarga **`PPF-Tester-Setup-vX.Y.Z.exe`** (instalador)
    o **`PPF-Tester.exe`** (portable, sin instalar).
-2. Ábrelo. No necesitas instalar Python ni nada más (≈ 52 MB, Windows 10/11). La app avisa e instala sola las versiones nuevas.
+2. Ábrelo. No necesitas instalar Python ni nada más (≈ 55 MB, Windows 10/11). La app avisa e instala sola las versiones nuevas.
 
 > Windows SmartScreen puede avisar la primera vez porque el ejecutable no está firmado:
 > pulsa **“Más información” → “Ejecutar de todas formas”**.
 
+**Mac (Apple Silicon, M1 o posterior):** descarga **`PPF-Tester-vX.Y.Z-macos.zip`**, descomprímelo y mueve
+**PPF Tester** a Aplicaciones. Como la app no está firmada por Apple, la primera vez haz **clic derecho → Abrir**
+(o en Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente»).
+
 ## Ejecutar desde el código
 
 1. Instala [Python 3.10 o superior](https://www.python.org/downloads/) marcando **“Add Python to PATH”**.
-2. Descarga este repositorio y haz doble clic en **`Instalar.bat`** (instala `numpy`, `sounddevice` y `PySide6`).
+2. Descarga este repositorio y haz doble clic en **`Instalar.bat`** (instala `numpy`, `sounddevice`, `PySide6` y `lameenc`).
+   En Mac/Linux: `pip install -r requirements.txt` (incluye `python-rtmidi` para el MIDI).
 3. Abre el programa con **`PPF Tester.bat`**.
 
 O desde la consola:
@@ -102,6 +126,11 @@ python ppf_tester/ppf_tester.py analizar MI_KIT.ppf --abrir
 python ppf_tester/ppf_tester.py importar "C:\Mis WAV\Real Drums" --modelo S670
 python ppf_tester/ppf_tester.py mejorar  MI_KIT.ppf --modelo S670
 python ppf_tester/ppf_tester.py mejorar-carpeta "C:\Mis kits" --modelo S670
+python ppf_tester/ppf_tester.py importar "C:\Mis WAV\Kit multi-mic" --ambiente 30 --sala 20
+python ppf_tester/ppf_tester.py compat   MI_KIT.ppf
+python ppf_tester/ppf_tester.py demo     MI_KIT.ppf --ritmos "Worship 6/8,Pop 4/4"
+python ppf_tester/ppf_tester.py voz      "C:\Mis WAV\Piano" --plantilla VOZ_NORMAL.ppf
+python ppf_tester/ppf_tester.py voz      PAD.wav --pad --ataque 0.8 --plantilla VOZ_NORMAL.ppf
 python -m unittest discover -s tests          # pruebas automáticas
 python ppf_tester/ppf_tester.py corregir MI_KIT.ppf --agrupar-hihat
 python ppf_tester/ppf_tester.py extraer  MI_KIT.ppf
@@ -109,7 +138,16 @@ python ppf_tester/ppf_tester.py puertos
 python ppf_tester/ppf_tester.py teclado  MI_KIT.ppf --grabar --entrada 1
 ```
 
+## Voces melódicas y pads
+
+Para crear voces (no baterías) la app necesita **una vez** una voz normal hecha en Yamaha Expansion Manager:
+crea un pack, añade una voz normal con cualquier WAV y guárdalo como `.ppf`. En **Voces y pads → Elegir plantilla…**
+elígelo: la app usa solo su estructura y pone tus muestras. Nombra los WAV con su nota (`Piano_C3.wav`, `Pad A#2.wav`)
+o deja que la app la detecte por el sonido.
+
 ## Probar en el PSR
+
+Lo más fácil: **Teclado → Asistente paso a paso**. A mano:
 
 1. Conecta el PSR al PC por **USB TO HOST** y la salida de auriculares del PSR a tu interfaz de audio.
 2. Instala el pack en el teclado y elige la voz en **RIGHT 1**.
@@ -130,7 +168,7 @@ git tag v2.1.0
 git push origin main --tags
 ```
 
-GitHub Actions compila `PPF-Tester.exe` y lo publica en **Releases** automáticamente.
+GitHub Actions compila `PPF-Tester.exe`, el instalador y la app de Mac, y los publica en **Releases** automáticamente.
 Para compilarlo en tu PC: `Compilar exe.bat` (resultado en `dist\`).
 
 ## Formato .ppf (referencia técnica)
@@ -146,6 +184,7 @@ Mira la [hoja de ruta](ROADMAP.md) y el [historial de cambios](CHANGELOG.md).
 ## Licencia
 
 [MIT](LICENSE) © 2026 [Angel Cm](https://angelcm.com). Puedes usarlo, modificarlo y compartirlo manteniendo el aviso de autoría.
+Componentes de terceros: [THIRD_PARTY.md](THIRD_PARTY.md).
 
 ---
 

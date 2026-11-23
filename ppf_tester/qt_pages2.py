@@ -154,6 +154,10 @@ class ListenPage(Page):
         gl.addWidget(self.swing)
         self.chk_metro = QCheckBox("Metrónomo")
         gl.addWidget(self.chk_metro)
+        b_demo = btn("Demo MP3", "share")
+        b_demo.setToolTip("Graba una demo del kit (cada pieza + ritmos) en MP3 para compartir por WhatsApp")
+        b_demo.clicked.connect(self._demo)
+        gl.addWidget(b_demo)
         self.b_groove = btn("Tocar ritmo", "play", primary=True)
         self.b_groove.clicked.connect(self.toggle_groove)
         gl.addWidget(self.b_groove)
@@ -412,6 +416,10 @@ class ListenPage(Page):
         except Exception as e:  # noqa: BLE001
             self.ctx.toast(str(e), "ERROR")
 
+    def _demo(self):
+        from qt_pages3 import export_demo
+        export_demo(self.ctx)
+
     # ------------------------------------------------------------- herramientas
     def _human_changed(self, on):
         if self.engine:
@@ -622,11 +630,14 @@ class ImprovePage(Page):
         for i, (k, t) in enumerate((("correcciones", "Limpieza (DC, clics, silencio final)"),
                                     ("procesado", "Procesado por pieza (EQ, ataque, compresión)"),
                                     ("balance", "Balance del kit"), ("afinar_toms", "Afinar toms y bombos repetidos"),
-                                    ("hihat", "Hi-hat: el cerrado corta al abierto"), ("abrir_filtro", "Abrir el filtro de la voz"))):
+                                    ("hihat", "Hi-hat: el cerrado corta al abierto"), ("abrir_filtro", "Abrir el filtro de la voz"),
+                                    ("nivel_teclado", "Nivel como los kits del teclado"), ("fase", "Corregir fase de muestras estéreo"))):
             cb = QCheckBox(t)
-            cb.setChecked(True)
+            cb.setChecked(k != "nivel_teclado")
             self.chk[k] = cb
-            g.addWidget(cb, 1 + i % 3, i // 3)
+            g.addWidget(cb, 1 + i % 4, i // 4)
+        self.chk["nivel_teclado"].setToolTip("En vez del balance relativo, lleva cada pieza a un nivel de referencia\n"
+                                             "parecido al de los kits de fábrica (no salta al cambiar de voz).")
         top.addWidget(c2, 4)
         # intensidad
         c3 = card()
@@ -641,6 +652,17 @@ class ImprovePage(Page):
         self.inten = slider(0, 150, 100)
         self.inten.valueChanged.connect(lambda v: self.int_lab.setText(f"{v} %"))
         l3.addWidget(self.inten)
+        rows = hbox(None, 0, 6)
+        rows.addWidget(caption("Sala integrada"))
+        rows.addStretch(1)
+        self.sala_lab = QLabel("0 %")
+        self.sala_lab.setStyleSheet(f"color:{C['gold']}; font-weight:700")
+        rows.addWidget(self.sala_lab)
+        l3.addLayout(rows)
+        self.sala = slider(0, 100, 0)
+        self.sala.setToolTip("Sala corta dentro de la muestra: más grande sin gastar efectos del PSR (alarga un poco las colas)")
+        self.sala.valueChanged.connect(lambda v: self.sala_lab.setText(f"{v} %"))
+        l3.addWidget(self.sala)
         l3.addWidget(caption("Capas de velocidad"))
         self.capas = QComboBox()
         self.capas.addItems(["Auto (según modelo)", "Sin capas", "2 capas", "3 capas"])
@@ -727,9 +749,8 @@ class ImprovePage(Page):
         rowb.addWidget(b_fine0)
         rowb.addStretch(1)
         l5.addLayout(rowb)
-        l5.addWidget(caption("Memoria en la serie S"))
-        self.bars = MemoryBars()
-        l5.addWidget(self.bars)
+        self.bars = MemoryBars()          # la memoria se muestra en la barra superior (Audio: … MB)
+        self.bars.hide()
         l5.addWidget(caption("Notas"))
         self.notes = text_view(80)
         l5.addWidget(self.notes, 1)
@@ -864,7 +885,7 @@ class ImprovePage(Page):
 
     def _opts(self):
         return Mj.OpcionesMejora(modelo=self.modelo.currentText(), intensidad=self.inten.value() / 100,
-                                 capas=["auto", "0", "2", "3"][self.capas.currentIndex()],
+                                 capas=["auto", "0", "2", "3"][self.capas.currentIndex()], sala=self.sala.value() / 100,
                                  **{k: cb.isChecked() for k, cb in self.chk.items()})
 
     def preview(self):

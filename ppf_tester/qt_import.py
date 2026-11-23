@@ -6,7 +6,7 @@ import os
 import numpy as np
 from PySide6.QtCore import QMimeData, QTimer, Qt, Signal
 from PySide6.QtGui import QDrag
-from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFileDialog, QHBoxLayout, QHeaderView,
+from PySide6.QtWidgets import (QMessageBox, QAbstractItemView, QCheckBox, QComboBox, QFileDialog, QHBoxLayout, QHeaderView,
                                QLabel, QLineEdit, QProgressBar, QPushButton, QSlider, QSpinBox, QTableWidget,
                                QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
@@ -152,11 +152,42 @@ class ImportPage(Page):
         self.chk_gm = QCheckBox("Completar teclas GM")
         self.chk_gm.setChecked(True)
         self.chk_gm.toggled.connect(lambda _: self.auto())
-        for w in (self.chk_proc, self.sl_int, self.lbl_int, self.chk_st, self.chk_nat, self.chk_gm):
+        self.chk_lvl = QCheckBox("Nivel como el teclado")
+        self.chk_lvl.setChecked(True)
+        self.chk_lvl.setToolTip("Ajusta el volumen de cada pieza a un nivel de referencia parecido al de los kits\n"
+                                "de fábrica, para que el kit no salte de volumen al cambiar de voz.")
+        self.lbl_sala = QLabel("Sala 0 %")
+        self.sl_sala = QSlider(Qt.Orientation.Horizontal)
+        self.sl_sala.setRange(0, 100)
+        self.sl_sala.setValue(0)
+        self.sl_sala.setFixedWidth(90)
+        self.sl_sala.setToolTip("Sala corta integrada en cada muestra: suena más grande sin gastar\n"
+                                "los efectos del teclado. Alarga un poco las colas (más memoria).")
+        self.sl_sala.valueChanged.connect(lambda v: self.lbl_sala.setText(f"Sala {v} %"))
+        self.sl_sala.sliderReleased.connect(self._schedule_estimate)
+        self.lbl_amb = QLabel("Ambiente 40 %")
+        self.sl_amb = QSlider(Qt.Orientation.Horizontal)
+        self.sl_amb.setRange(0, 100)
+        self.sl_amb.setValue(40)
+        self.sl_amb.setFixedWidth(90)
+        self.sl_amb.setToolTip("Kit multi-micrófono: cuánto de overheads y sala se mezcla con los micrófonos cercanos.")
+        self.sl_amb.valueChanged.connect(lambda v: self.lbl_amb.setText(f"Ambiente {v} %"))
+        for w in (self.lbl_amb, self.sl_amb):
+            w.setVisible(False)
+        for w in (self.chk_proc, self.sl_int, self.lbl_int, self.chk_st, self.chk_nat, self.chk_gm, self.chk_lvl):
             opts.addWidget(w)
             if isinstance(w, QCheckBox):
                 w.toggled.connect(self._schedule_estimate)
         opts.addStretch(1)
+        root.addLayout(opts)
+        opts = hbox(None, 0, 16)
+        for w in (self.lbl_sala, self.sl_sala, self.lbl_amb, self.sl_amb):
+            opts.addWidget(w)
+        opts.addStretch(1)
+        self.b_empty = btn("Kit vacío", "doc")
+        self.b_empty.setToolTip("Empieza un kit desde cero y añade muestras desde la Biblioteca")
+        self.b_empty.clicked.connect(self.nuevo_vacio)
+        opts.addWidget(self.b_empty)
         self.b_auto = btn("Volver a armar automático", "refresh")
         self.b_auto.clicked.connect(self.auto)
         opts.addWidget(self.b_auto)
@@ -202,7 +233,7 @@ class ImportPage(Page):
         self.tbl.setShowGrid(False)
         self.tbl.verticalHeader().setDefaultSectionSize(40)
         hh = self.tbl.horizontalHeader()
-        for i, w in enumerate((24, 40, 150, 112, 0, 58, 54, 54, 76, 56, 34)):
+        for i, w in enumerate((24, 40, 140, 108, 0, 54, 48, 48, 66, 52, 34)):
             hh.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch if w == 0 else QHeaderView.ResizeMode.Fixed)
             if w:
                 self.tbl.setColumnWidth(i, w)
@@ -223,8 +254,12 @@ class ImportPage(Page):
         b_play.clicked.connect(lambda: self._tree_play(self.tree.currentItem()))
         b_add = btn("Añadir a tecla libre", "sparkle")
         b_add.clicked.connect(self.add_from_tree)
+        b_lib = btn("A la biblioteca", "library")
+        b_lib.setToolTip("Guarda el grupo o archivo elegido (o todos) en tu Biblioteca de muestras")
+        b_lib.clicked.connect(self.to_library)
         r2.addWidget(b_play)
         r2.addWidget(b_add)
+        r2.addWidget(b_lib)
         fl.addLayout(r2)
         side.addWidget(fc, 3)
         mc = card()
@@ -245,7 +280,7 @@ class ImportPage(Page):
         side.addWidget(mc, 2)
         side_w = QWidget()
         side_w.setLayout(side)
-        side_w.setMaximumWidth(400)
+        side_w.setMaximumWidth(370)
         body.addWidget(side_w, 3)
 
         self.est_timer = QTimer(self)
@@ -270,11 +305,19 @@ class ImportPage(Page):
 
         def job():
             arch = I.escanear(path)
-            return arch, I.agrupar(arch)
+            return arch, I.agrupar(I.preparar_archivos(arch, self.sl_amb.value() / 100))
 
         def done(res):
             self.progress.setVisible(False)
             self.archivos, self.grupos = res
+            import sonido
+            multi = sonido.hay_multimic(self.archivos)
+            for w in (self.lbl_amb, self.sl_amb):
+                w.setVisible(multi)
+            if multi:
+                mics = sorted({a.mic for a in self.archivos if a.mic})
+                self.ctx.toast("Kit multi-micrófono (" + ", ".join(sonido.MIC_NOMBRE.get(m, m) for m in mics) +
+                               "): ajusta «Ambiente» para la mezcla", "INFO", 6000)
             if not self.grupos:
                 self.ctx.toast("No encontré golpes WAV en esa carpeta.", "AVISO")
                 return
@@ -537,7 +580,8 @@ class ImportPage(Page):
     def play(self, p):
         sel = p.seleccion()
         a = sel[-1]
-        x = a.x
+        import sonido
+        x = sonido.audio_archivo(a, self.sl_amb.value() / 100)
         if p.afinacion:
             import dsp
             x = dsp.to_rate(x, I.SR * 2 ** (p.afinacion / 12), I.SR)
@@ -548,13 +592,82 @@ class ImportPage(Page):
         if it is None or it.data(0, Qt.ItemDataRole.UserRole) is None:
             return
         gi, vi = it.data(0, Qt.ItemDataRole.UserRole)
-        self._play_x(self.grupos[gi].archivos[vi].x)
+        import sonido
+        self._play_x(sonido.audio_archivo(self.grupos[gi].archivos[vi], self.sl_amb.value() / 100))
 
     # ------------------------------------------------------------ memoria
     def _opts(self):
         return I.OpcionesImport(nombre=self.e_name.text().strip() or "Mi Kit", modelo=self.cb_model.currentText(),
                                 estereo_platos=self.chk_st.isChecked(), procesar=False,
-                                dinamica_natural=self.chk_nat.isChecked())
+                                dinamica_natural=self.chk_nat.isChecked(), ambiente=self.sl_amb.value() / 100,
+                                sala=self.sl_sala.value() / 100, nivel_teclado=self.chk_lvl.isChecked())
+
+    # ------------------------------------------------------------ kit desde cero / biblioteca
+    def nuevo_vacio(self):
+        if self.piezas and QMessageBox.question(self, "PPF Tester", "¿Empezar un kit vacío? Se descarta el kit que estás armando.") \
+                != QMessageBox.StandardButton.Yes:
+            return
+        self.carpeta = ""
+        self.archivos, self.grupos, self.piezas = [], [], []
+        self._undo.clear()
+        self._redo.clear()
+        self.e_name.setText("Kit nuevo")
+        self.lbl_path.setText("Kit desde cero: añade muestras desde la Biblioteca (botón «Añadir al kit…»).")
+        self._fill_tree()
+        self.refresh()
+
+    def agregar_archivos(self, paths, tipos=None, nombres=None, nota=None):
+        """Añade WAV sueltos (p. ej. de la Biblioteca) al kit, cada uno en una tecla libre de su pieza."""
+        tipos, nombres = tipos or {}, nombres or {}
+
+        def job():
+            arch = I.escanear(paths)
+            for a in arch:
+                if a.path in tipos:
+                    a.tipo, a.seguro = tipos[a.path], True
+                if a.path in nombres:
+                    a.nombre = nombres[a.path] + ".wav"
+                    a.base = I.base_nombre(a.nombre, a.tipo)
+                a.rel = os.path.join("Biblioteca", a.nombre)
+            return arch, I.agrupar(arch)
+
+        def done(res):
+            arch, grupos = res
+            if not grupos:
+                self.ctx.toast("Esas muestras no se pudieron leer.", "AVISO")
+                return
+            self.archivos += arch
+            self._snap()
+            for g in grupos:
+                self.grupos.append(g)
+                usadas = {p.nota for p in self.piezas}
+                cand = ([nota] if nota is not None else []) + I.PIEZAS[g.tipo][1] + I.PIEZAS["perc"][1] + list(range(27, 88))
+                n = next((c for c in cand if c not in usadas), None)
+                if n is None:
+                    break
+                self.piezas.append(I.Pieza(n, g.tipo, g))
+            self._fill_tree()
+            self.refresh()
+            self.ctx.toast(f"{len(grupos)} pieza(s) añadidas al kit", "OK")
+        self.ctx.run_bg(job, done)
+
+    def to_library(self):
+        it = self.tree.currentItem()
+        arch = []
+        if it is not None and it.data(0, Qt.ItemDataRole.UserRole) is not None:
+            gi, vi = it.data(0, Qt.ItemDataRole.UserRole)
+            g = self.grupos[gi]
+            arch = g.archivos if it.childCount() else [g.archivos[vi]]
+        else:
+            arch = [a for g in self.grupos for a in g.archivos]
+        if not arch:
+            return
+        import sonido
+        amb = self.sl_amb.value() / 100
+        import dataclasses
+        listos = [dataclasses.replace(a, x=sonido.audio_archivo(a, amb)) for a in arch]
+        n = self.ctx.library.add_archivos(listos, os.path.basename(self.carpeta.rstrip("\\/")) if self.carpeta else "")
+        self.ctx.toast(f"{n} muestra(s) nuevas en la Biblioteca" if n else "Ya estaban en la Biblioteca", "OK")
 
     def _schedule_estimate(self, *_):
         if self.piezas:

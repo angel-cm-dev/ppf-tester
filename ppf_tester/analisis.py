@@ -178,6 +178,19 @@ def analyze_voice(pack: Pack, voice) -> KitReport:
         missing = [v for v in range(1, 128) if not cover[v]]
         if missing:
             problems.append(Problem("AVISO", "vel", f"Nota {note_name(n)}: no suena con velocidades {missing[0]}–{missing[-1]}."))
+    # fase de las muestras estéreo reales (L y R distintas)
+    import sonido
+    vistos = set()
+    for el, kb, lo, hi, vlo, vhi in voice.zones():
+        if len(kb.samples) == 2 and kb.samples[0].wave_uid != kb.samples[1].wave_uid:
+            par = (kb.samples[0].wave_uid, kb.samples[1].wave_uid)
+            wl, wr = pack.waves.get(par[0]), pack.waves.get(par[1])
+            if par in vistos or wl is None or wr is None:
+                continue
+            vistos.add(par)
+            pr = sonido.fase(wl.samples, wr.samples, wl.rate).problema
+            if pr:
+                problems.append(Problem("AVISO", "fase", f"{note_name(lo)} '{wl.name}': {pr}.", True))
     fake = sum(1 for z in zones if z["fake_stereo"])
     if fake:
         problems.append(Problem("INFO", "falso_estereo",

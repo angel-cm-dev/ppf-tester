@@ -1,5 +1,5 @@
-# Publica una versión nueva con el ejecutable de Windows.
-# Se activa al subir una etiqueta vX.Y.Z  (ej.: git tag v2.1.0 && git push origin v2.1.0)
+# Publica una versión nueva con los programas de Windows y macOS.
+# Se activa al subir una etiqueta vX.Y.Z  (ej.: git tag v5.0.0 && git push origin v5.0.0)
 name: Publicar versión
 
 on:
@@ -64,3 +64,37 @@ jobs:
             dist/PPF-Tester-Setup-*.exe
             dist/*.zip
           generate_release_notes: true
+
+  macos-app:
+    runs-on: macos-latest
+    needs: windows-exe          # después de Windows: la versión ya existe y solo se añade el .zip
+    # si el Mac falla, la versión de Windows se publica igual
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller pillow
+
+      - name: Pruebas automáticas
+        run: python -m unittest discover -s tests -v
+
+      - name: Construir PPF Tester.app
+        run: python build.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPF-Tester-macos
+          path: dist/*-macos.zip
+
+      - name: Publicar en Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*-macos.zip

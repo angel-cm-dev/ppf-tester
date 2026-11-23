@@ -26,6 +26,7 @@ import numpy as np
 
 import dsp
 import modelos
+import sonido
 from ppf_format import Pack, Resource, Wave, load_pack, note_name
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -69,7 +70,8 @@ REGLAS = [  # (regex sobre ruta+nombre en minúsculas, tipo) — el orden import
     (r"sleigh|cascabel|jingle", "perc"),
     (r"stick.?hit|\bsticks\b|block|woodblock|clave", "perc"),
     (r"ride.?bell|campana.?ride|\bcup\b|\bbell\b(?!s)", "bell"),
-    (r"(hi.?hat|\bhh\b|hat|chimbal|cimbal|charles|contratiempo).*(open|abiert|aberto|\bop\b|\bo\b)|\bohh?\b|open.?h", "hh_open"),
+    # «OH» solo es hi-hat abierto junto a hi-hat/HH; suelto es la carpeta de overheads (micrófonos)
+    (r"(hi.?hat|\bhh\b|hat|chimbal|cimbal|charles|contratiempo).*(open|abiert|aberto|\bop\b|\bo\b|\boh\b)|\bohh\b|open.?h", "hh_open"),
     (r"(hi.?hat|\bhh\b|hat|chimbal|cimbal|charles).*(pedal|foot|pie|\bpd\b|chick)|pedal.?h|\bphh\b", "hh_pedal"),
     (r"hi.?hat|\bhh\b|\bchh\b|\bhat\b|chimbal|cimbal|charles|contratiempo", "hh_closed"),
     (r"splash", "splash"),
@@ -246,6 +248,7 @@ class Archivo:
     altura: float
     decae: float
     excluido: str = ""       # motivo si no se usa (loop, error…)
+    mic: str | None = None   # close / close2 / oh / room / mezcla (kits multi-micrófono)
 
     @property
     def dur(self) -> float:
@@ -363,7 +366,7 @@ def escanear(entrada, log=lambda s: None, progreso=lambda i, n: None) -> list[Ar
             rms = float(np.sqrt(np.mean(x44[: int(SR * 0.25)] ** 2))) if len(x44) else 0
             out.append(Archivo(p, rel, nombre, x44, ch, sr, tipo, seguro, detectar_capa(nombre, tipo), base_nombre(nombre, tipo),
                                20 * np.log10(max(pk, 1e-9)), 20 * np.log10(max(rms, 1e-9)), altura_hz(x44, SR),
-                               decaimiento_s(x44, SR), excl))
+                               decaimiento_s(x44, SR), excl, sonido.detectar_mic(rel)))
             log(f"Leído {rel}")
         except Exception as e:  # noqa: BLE001
             out.append(Archivo(p, rel, nombre, np.zeros((0, 1)), 1, 0, "perc", False, None, "", -120, -120, 0, 0,
@@ -468,6 +471,11 @@ class OpcionesImport:
     intensidad: float = 0.5
     dinamica_natural: bool = False
     hihat_grupo: bool = True
+    ambiente: float = 0.4          # mezcla de micrófonos: cuánto overhead/sala
+    sala: float = 0.0              # sala integrada en la muestra (0..1)
+    sala_tam: float = 0.4
+    nivel_teclado: bool = True     # nivel de referencia por pieza (como los kits del teclado)
+    corregir_fase: bool = True
 
 
 LARGO_MAX = {"bombo": 1.6, "caja": 1.8, "tom": 2.5, "hihat": 1.6, "ride": 5.0, "crash": 5.0, "perc": 2.0}
@@ -491,6 +499,25 @@ def _preparar(x: np.ndarray, mono: bool, largo: float, tail_db: float) -> np.nda
     m = min(len(y), 24)
     y[:m] *= np.linspace(0, 1, m)[:, None]
     return y
+
+
+def _cadena(x, mono, fam, factor, tail_db, op) -> np.ndarray:
+    """Recorte + fase + procesado + sala de un golpe."""
+    from mejora import procesar
+    y = _preparar(x, mono, LARGO_MAX[fam] * factor, tail_db)
+    if y.shape[1] == 2 and op.corregir_fase:
+        l, r, _ = sonido.corregir_fase(y[:, :1], y[:, 1:])
+        y = np.hstack([l, r])
+    if op.procesar and len(y) > 32:
+        y = procesar(y, SR, fam, op.intensidad)
+    if op.sala > 0 and len(y) > 32:
+        y = sonido.sala(y, SR, op.sala * (0.5 if fam in ("crash", "ride", "hihat") else 1.0), op.sala_tam)
+    return y
+
+
+def preparar_archivos(archivos: list[Archivo], ambiente: float) -> list[Archivo]:
+    """Mezcla los micrófonos de los kits multi-micrófono antes de agrupar."""
+    return sonido.mezclar_mics(archivos, sonido.MezclaMics(ambiente)) if sonido.hay_multimic(archivos) else archivos
 
 
 def rangos(n: int) -> list[tuple[int, int]]:
@@ -517,7 +544,6 @@ class Plan:
 
 def planificar(piezas: list[Pieza], op: OpcionesImport, log=lambda s: None) -> Plan:
     """Prepara el audio y ajusta capas/colas a la memoria del modelo."""
-    from mejora import procesar
     m = modelos.MODELOS[op.modelo]
     activas = [p for p in piezas if p.usar]
     tope_capas = 2 if m.memoria_mb < 100 else 4
@@ -533,22 +559,25 @@ def planificar(piezas: list[Pieza], op: OpcionesImport, log=lambda s: None) -> P
             claves = []
             pk_fuerte = None
             for a in sel:
-                k = (id(a), mono, round(factor, 2), tail_db)
+                k = (id(a), mono, round(factor, 2), tail_db, round(op.ambiente, 2))
                 if k not in audio:
-                    y = _preparar(a.x, mono, LARGO_MAX[fam] * factor, tail_db)
-                    if op.procesar and len(y) > 32:
-                        y = procesar(y, SR, fam, op.intensidad)
-                    audio[k] = y
+                    audio[k] = _cadena(sonido.audio_archivo(a, op.ambiente), mono, fam, factor, tail_db, op)
                 claves.append(k)
             pk_fuerte = max((np.abs(audio[k]).max() for k in claves if len(audio[k])), default=1) or 1
             capas_map[p.nota] = []
 
-            def nivelar(k):
+            # nivel de referencia de la pieza (sobre la capa más fuerte, igual para todas)
+            g_ref = 0.0
+            if op.nivel_teclado and claves and len(audio[claves[-1]]):
+                yf = audio[claves[-1]] * (10 ** (-0.5 / 20) / max(np.abs(audio[claves[-1]]).max(), 1e-9))
+                g_ref = min(0.0, sonido.ganancia_referencia(yf, SR, fam))
+
+            def nivelar(k, pk_fuerte=pk_fuerte, g_ref=g_ref):
                 y = audio[k]
                 ref = pk_fuerte if op.dinamica_natural else max(np.abs(y).max(), 1e-9)
-                kk = k + (op.dinamica_natural and round(float(pk_fuerte), 4),)
+                kk = k + (op.dinamica_natural and round(float(pk_fuerte), 4), round(g_ref, 1))
                 if kk not in audio:
-                    audio[kk] = np.clip(y * (10 ** (-0.5 / 20) / ref), -1, 32767 / 32768)
+                    audio[kk] = np.clip(y * (10 ** ((-0.5 + g_ref) / 20) / ref), -1, 32767 / 32768)
                 return kk
 
             nvar = p.variacion if (p.variacion > 1 and tope_capas > 1) else 1
@@ -559,12 +588,9 @@ def planificar(piezas: list[Pieza], op: OpcionesImport, log=lambda s: None) -> P
                 # variación humana: la capa se reparte en tramos de velocidad que alternan versiones
                 vers = [k]
                 for alt in p.alternativas(a, nvar):
-                    ka = (id(alt), mono, round(factor, 2), tail_db)
+                    ka = (id(alt), mono, round(factor, 2), tail_db, round(op.ambiente, 2))
                     if ka not in audio:
-                        y = _preparar(alt.x, mono, LARGO_MAX[fam] * factor, tail_db)
-                        if op.procesar and len(y) > 32:
-                            y = procesar(y, SR, fam, op.intensidad)
-                        audio[ka] = y
+                        audio[ka] = _cadena(sonido.audio_archivo(alt, op.ambiente), mono, fam, factor, tail_db, op)
                     vers.append(ka)
                 vers = [nivelar(v) for v in vers]
                 ancho = max(3, -(-(hi - lo + 1) // 12))
@@ -695,7 +721,7 @@ def construir(plan: Plan, op: OpcionesImport, salida: str) -> Pack:
 def crear_kit(entrada, salida: str, op: OpcionesImport, log=print):
     """Todo en uno (línea de comandos)."""
     archivos = escanear(entrada, log)
-    grupos = agrupar(archivos)
+    grupos = agrupar(preparar_archivos(archivos, op.ambiente))
     if not grupos:
         raise RuntimeError("No encontré golpes WAV válidos en esa carpeta.")
     piezas = auto_kit(grupos)

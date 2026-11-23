@@ -1,7 +1,8 @@
-"""Construye PPF-Tester.exe (Windows) con PyInstaller y lo empaqueta en un .zip.
+"""Construye PPF Tester con PyInstaller.
 
 Uso:  python build.py
-Resultado:  dist/PPF-Tester.exe  y  dist/PPF-Tester-vX.Y.Z-windows.zip
+Windows:  dist/PPF-Tester.exe  y  dist/PPF-Tester-vX.Y.Z-windows.zip
+macOS:    dist/PPF Tester.app  y  dist/PPF-Tester-vX.Y.Z-macos.zip
 """
 import os
 import re
@@ -41,10 +42,18 @@ def main():
     with open(vfile, "w", encoding="utf-8") as f:
         f.write(VERSION_INFO)
     ico = os.path.join(SRC, "ppf_tester.ico")
+    mac = sys.platform == "darwin"
+    if mac:
+        # .app (carpeta) con icono convertido por Pillow; la versión va en el Info.plist
+        modo = ["--onedir", "--windowed", "--name", "PPF Tester", "--icon", ico,
+                "--osx-bundle-identifier", "com.angelcm.ppftester"]
+    else:
+        modo = ["--onefile", "--windowed", "--name", "PPF-Tester", "--icon", ico, "--version-file", vfile]
     args = [
-        sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", "--windowed",
-        "--name", "PPF-Tester", "--icon", ico, "--version-file", vfile,
+        sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", *modo,
         "--add-data", f"{ico}{os.pathsep}.",
+        "--hidden-import", "lameenc",
+        *(["--hidden-import", "rtmidi"] if mac else []),
         "--add-data", f"{os.path.join(SRC, 'plantillas')}{os.pathsep}plantillas",
         "--paths", SRC,
         "--distpath", os.path.join(ROOT, "dist"), "--workpath", build, "--specpath", build,
@@ -59,12 +68,30 @@ def main():
     ]
     print(" ".join(args))
     subprocess.check_call(args)
+    if mac:
+        app = os.path.join(ROOT, "dist", "PPF Tester.app")
+        plist = os.path.join(app, "Contents", "Info.plist")
+        if os.path.exists(plist):
+            import plistlib
+            with open(plist, "rb") as f:
+                d = plistlib.load(f)
+            d.update(CFBundleShortVersionString=VERSION, CFBundleVersion=VERSION, NSHighResolutionCapable=True,
+                     NSMicrophoneUsageDescription="PPF Tester graba la salida de tu teclado para compararla y calibrar la simulación.",
+                     NSHumanReadableCopyright="MIT · Angel Cm · angelcm.com")
+            with open(plist, "wb") as f:
+                plistlib.dump(d, f)
+            subprocess.call(["codesign", "--force", "--deep", "--sign", "-", app])
+        zpath = os.path.join(ROOT, "dist", f"PPF-Tester-v{VERSION}-macos.zip")
+        subprocess.check_call(["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", app, zpath])
+        print(f"\nListo:\n  {app}\n  {zpath} ({os.path.getsize(zpath) / 1e6:.1f} MB)")
+        return
     exe = os.path.join(ROOT, "dist", "PPF-Tester.exe")
     zpath = os.path.join(ROOT, "dist", f"PPF-Tester-v{VERSION}-windows.zip")
     with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
         z.write(exe, "PPF-Tester.exe")
         z.write(os.path.join(ROOT, "README.md"), "LEEME.md")
         z.write(os.path.join(ROOT, "LICENSE"), "LICENSE.txt")
+        z.write(os.path.join(ROOT, "THIRD_PARTY.md"), "TERCEROS.md")
     print(f"\nListo:\n  {exe} ({os.path.getsize(exe) / 1e6:.1f} MB)\n  {zpath} ({os.path.getsize(zpath) / 1e6:.1f} MB)")
 
 

@@ -200,7 +200,8 @@ def cmd_importar(a):
     carpeta = a.carpeta.rstrip("\\/")
     nombre = a.nombre or os.path.basename(carpeta)[:20]
     out = a.salida or os.path.join(os.path.dirname(carpeta), f"{nombre}_{modelo[4:]}.ppf")
-    op = I.OpcionesImport(nombre=nombre, modelo=modelo, procesar=not a.sin_procesar, intensidad=a.intensidad / 100)
+    op = I.OpcionesImport(nombre=nombre, modelo=modelo, procesar=not a.sin_procesar, intensidad=a.intensidad / 100,
+                          ambiente=a.ambiente / 100, sala=a.sala / 100, nivel_teclado=not a.sin_nivel)
     archivos, grupos, plan, pack = I.crear_kit(carpeta, out, op, log=lambda s: None)
     print(f"{len(archivos)} WAV · {sum(1 for x in archivos if x.excluido)} ignorados · {len(grupos)} grupos")
     for p in sorted(plan.piezas, key=lambda p: p.nota):
@@ -227,6 +228,54 @@ def cmd_mejorar_carpeta(a):
     for f, r in Mj.mejorar_carpeta(a.carpeta, salida, op, log=print):
         print(f"  {f}: {r}")
     print(f"\nGuardados en: {salida}")
+
+
+def cmd_compat(a):
+    import compat
+    pack = load_pack(a.archivo)
+    for r in compat.revisar(pack):
+        print(f"{r.modelo:<10} {r.resumen}")
+        for d in r.detalles:
+            print(f"    {d}")
+
+
+def cmd_demo(a):
+    import demo
+    import motor
+    pack = load_pack(a.archivo)
+    if not pack.voices:
+        sys.exit("El pack no tiene voces.")
+    ritmos = [r.strip() for r in a.ritmos.split(",") if r.strip()] if a.ritmos else ["Worship 4/4 (toms)", "Balada 4/4"]
+    import grooves
+    for r in ritmos:
+        if r not in grooves.PATRONES:
+            sys.exit(f"Ritmo desconocido: {r}. Usa: " + ", ".join(grooves.PATRONES))
+    e = motor.Engine(pack, pack.voices[0])
+    x = demo.demo_kit(e, ritmos, a.bpm, a.compases, not a.sin_recorrido)
+    out = demo.guardar(a.salida or os.path.splitext(a.archivo)[0] + "_demo.mp3", x)
+    print(f"Demo: {out} ({len(x) / motor.SR:.0f} s)")
+
+
+def cmd_voz(a):
+    import melodico as Mel
+    tpl = a.plantilla or Mel.ruta_plantilla()
+    if not os.path.exists(tpl):
+        sys.exit("Falta la plantilla: usa --plantilla con un .ppf de voz normal creado en Expansion Manager.")
+    ms = Mel.escanear(a.entrada, sostenido=a.loop or a.pad)
+    if a.pad:
+        for m in ms:
+            m.x, m.loop = Mel.crear_pad(m.x, ataque_s=a.ataque)
+    if not ms:
+        sys.exit("No encontré WAV válidos.")
+    for m in sorted(ms, key=lambda m: m.nota):
+        lp = f" loop {(m.loop.fin - m.loop.inicio) / 44100:.2f}s" if m.loop else ""
+        print(f"  {note_name(m.nota):<5} {m.nombre:<28} ({m.como}){lp}")
+    nombre = a.nombre or os.path.splitext(os.path.basename(a.entrada.rstrip("\\/")))[0][:20]
+    out = a.salida or os.path.join(os.path.dirname(os.path.abspath(a.entrada)), f"{nombre}.ppf")
+    pack = Mel.construir(load_pack(tpl), ms, Mel.OpcionesVoz(nombre=nombre, estereo=a.estereo, sostenido=a.loop or a.pad), out)
+    if pack.errors:
+        sys.exit("El archivo creado no pasó la verificación: " + "; ".join(pack.errors))
+    print(f"\nVoz: {out}")
 
 
 def cmd_puertos(a):
@@ -367,8 +416,35 @@ def main(argv=None):
     s.add_argument("--nombre", help="Nombre del kit (máx. 20 caracteres)")
     s.add_argument("--intensidad", type=float, default=50, help="Mejora por pieza 0-150 (%%)")
     s.add_argument("--sin-procesar", action="store_true", help="No aplicar la mejora por pieza")
+    s.add_argument("--ambiente", type=float, default=40, help="Kits multi-micrófono: overheads/sala 0-100 (%%)")
+    s.add_argument("--sala", type=float, default=0, help="Sala integrada en las muestras 0-100 (%%)")
+    s.add_argument("--sin-nivel", action="store_true", help="No ajustar el nivel de referencia por pieza")
     s.add_argument("--salida")
     s.set_defaults(f=cmd_importar)
+
+    s = sub.add_parser("compat", help="Compatibilidad del pack con cada modelo de la serie S.")
+    s.add_argument("archivo")
+    s.set_defaults(f=cmd_compat)
+
+    s = sub.add_parser("demo", help="Crea una demo del kit en MP3 (o WAV) para compartir.")
+    s.add_argument("archivo")
+    s.add_argument("--ritmos", help="Ritmos separados por comas (por defecto: Worship 4/4 (toms), Balada 4/4)")
+    s.add_argument("--bpm", type=float, default=76)
+    s.add_argument("--compases", type=int, default=4)
+    s.add_argument("--sin-recorrido", action="store_true", help="No incluir el recorrido pieza por pieza")
+    s.add_argument("--salida", help="Archivo .mp3 o .wav")
+    s.set_defaults(f=cmd_demo)
+
+    s = sub.add_parser("voz", help="Crea una voz melódica o un pad desde WAV (necesita una plantilla de voz normal).")
+    s.add_argument("entrada", help="Carpeta con una muestra por nota, o un WAV para --pad")
+    s.add_argument("--plantilla", help="Un .ppf con una voz normal creada en Expansion Manager")
+    s.add_argument("--nombre")
+    s.add_argument("--loop", action="store_true", help="Sonido sostenido: crear loops")
+    s.add_argument("--pad", action="store_true", help="Pad/ambiente desde un solo WAV")
+    s.add_argument("--ataque", type=float, default=0.3, help="Entrada suave del pad en segundos")
+    s.add_argument("--estereo", action="store_true")
+    s.add_argument("--salida")
+    s.set_defaults(f=cmd_voz)
 
     s = sub.add_parser("mejorar-carpeta", help="Mejora todos los .ppf de una carpeta.")
     s.add_argument("carpeta")

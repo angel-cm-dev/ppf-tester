@@ -270,6 +270,39 @@ def icon(name: str, color: str = "fg", size: int = 20) -> QIcon:
         p.drawEllipse(QPointF(12, 12), 8.5, 8.5)
         p.drawEllipse(QRectF(8.5, 3.5, 7, 17))
         p.drawLine(QPointF(3.5, 12), QPointF(20.5, 12))
+    elif name == "library":
+        for x, h in ((4, 15), (8.5, 15), (13, 13)):
+            p.drawRoundedRect(QRectF(x, 20 - h, 3.5, h), 1, 1)
+        p.save()
+        p.translate(18.5, 7)
+        p.rotate(-18)
+        p.drawRoundedRect(QRectF(-1.6, 0, 3.4, 13), 1, 1)
+        p.restore()
+    elif name == "stack":
+        for y in (6, 10.5, 15):
+            path = QPainterPath(QPointF(12, y - 3.5))
+            path.lineTo(20, y); path.lineTo(12, y + 3.5); path.lineTo(4, y)
+            path.closeSubpath()
+            p.drawPath(path)
+    elif name == "pads":
+        for i in range(3):
+            for j in range(3):
+                p.drawRoundedRect(QRectF(4 + i * 5.7, 4 + j * 5.7, 4.3, 4.3), 1.2, 1.2)
+    elif name == "music":
+        p.drawEllipse(QPointF(7.5, 17), 2.8, 2.2)
+        p.drawEllipse(QPointF(16.5, 15), 2.8, 2.2)
+        p.drawLine(QPointF(10.2, 17), QPointF(10.2, 5.5))
+        p.drawLine(QPointF(19.2, 15), QPointF(19.2, 3.5))
+        p.drawLine(QPointF(10.2, 5.5), QPointF(19.2, 3.5))
+    elif name == "star":
+        pts = [QPointF(12 + math.cos(-math.pi / 2 + k * math.pi / 5) * (8.5 if k % 2 == 0 else 3.8),
+                       12.5 + math.sin(-math.pi / 2 + k * math.pi / 5) * (8.5 if k % 2 == 0 else 3.8)) for k in range(10)]
+        p.drawPolygon(pts)
+    elif name == "share":
+        for cx, cy in ((6, 12), (17, 6), (17, 18)):
+            p.drawEllipse(QPointF(cx, cy), 2.6, 2.6)
+        p.drawLine(QPointF(8.3, 10.8), QPointF(14.7, 7.2))
+        p.drawLine(QPointF(8.3, 13.2), QPointF(14.7, 16.8))
     p.end()
     return QIcon(pm)
 
@@ -408,6 +441,12 @@ class GlowPiano(QWidget):
         st = self.status.get(n)
         if st is None:
             return QColor("#1b1b21") if black else QColor("#ece7df")
+        if st in ("Z1", "Z2"):                 # zonas alternas (voces melódicas)
+            a = q("gold" if st == "Z1" else "blue")
+            b = QColor("#1b1b21") if black else QColor("#ece7df")
+            k = 0.45
+            return QColor(int(a.red() * k + b.red() * (1 - k)), int(a.green() * k + b.green() * (1 - k)),
+                          int(a.blue() * k + b.blue() * (1 - k)))
         base = {"OK": "gold", "INFO": "gold", "AVISO": "coral", "ERROR": "ERROR"}.get(st, "gold")
         c = q(base)
         if black:

@@ -48,6 +48,8 @@ def q(name: str, alpha: int | None = None) -> QColor:
 
 def fonts() -> tuple[str, str]:
     fams = set(QFontDatabase.families())
+    if sys.platform == "darwin":
+        return ("SF Pro Text", "SF Pro Display") if "SF Pro Text" in fams else ("Helvetica Neue", "Helvetica Neue")
     if "Segoe UI Variable Text" in fams:
         return "Segoe UI Variable Text", "Segoe UI Variable Display"
     return "Segoe UI", "Segoe UI"

@@ -9,7 +9,10 @@ import threading
 import urllib.parse
 from logging.handlers import RotatingFileHandler
 
-CARPETA = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "PPFTester")
+if sys.platform == "darwin":
+    CARPETA = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "PPFTester")
+else:
+    CARPETA = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "PPFTester")
 ARCHIVO = os.path.join(CARPETA, "ppf_tester.log")
 log = logging.getLogger("ppf_tester")
 

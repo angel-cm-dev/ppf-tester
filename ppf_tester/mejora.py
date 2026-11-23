@@ -99,24 +99,9 @@ def _with(w: Wave, x: np.ndarray) -> Wave:
 
 
 def capa_suave(x: np.ndarray, sr: float, tipo: str, factor: float, touch_db: float) -> np.ndarray:
-    """Golpe más suave a partir del fuerte: más oscuro y con menos ataque.
-    factor 1 = capa más suave, 0.5 = intermedia. Recorta la cola que no se oiría."""
-    fc = CORTE_SUAVE[tipo] * (1 / max(factor, 0.2)) ** 1.0
-    y = dsp.lpf(x, sr, fc, 0.6)
-    y = dsp.lpf(y, sr, fc * 1.3, 0.6)
-    y = dsp.transient(y, sr, -0.5 * factor)
-    pk0, pk = np.abs(x).max(), np.abs(y).max()
-    y = y * (pk0 / pk) if pk > 0 else y
-    # cola inaudible a esa velocidad
-    thr = 10 ** ((-74 - touch_db) / 20)
-    a = np.abs(y).max(axis=1)
-    idx = np.where(a > thr)[0]
-    if len(idx):
-        end = min(len(y), idx[-1] + int(sr * 0.02))
-        y = y[:end].copy()
-        f = min(len(y), int(sr * 0.03))
-        y[-f:] *= (0.5 - 0.5 * np.cos(np.linspace(np.pi, 0, f)))[:, None]
-    return y
+    """Golpe más suave a partir del fuerte (modelo de timbre por velocidad, ver sonido.py)."""
+    import sonido
+    return sonido.capa_suave(x, sr, tipo, factor, touch_db)
 
 
 @dataclass
@@ -131,6 +116,10 @@ class OpcionesMejora:
     abrir_filtro: bool = True
     corte_hz: float = 16000.0
     capas: str = "auto"            # auto | 0 | 2 | 3
+    nivel_teclado: bool = False    # nivel de referencia por pieza (en vez del balance relativo)
+    sala: float = 0.0              # sala integrada (0..1)
+    sala_tam: float = 0.4
+    fase: bool = True              # corregir fase de muestras estéreo
 
 
 @dataclass
@@ -189,8 +178,52 @@ def mejorar(pack: Pack, op: OpcionesMejora, log=lambda s: None) -> tuple[list[Fi
             by_name[name] = replace_wave(pack, uid, _with(w, y))
             f.cambios.append(f"cadena «{NOMBRE_TIPO[f.tipo]}» al {op.intensidad * 100:.0f} %")
 
+    # 2b. sala integrada
+    if op.sala > 0:
+        import sonido
+        log("Sala integrada…")
+        for name, f in filas.items():
+            uid = by_name[name]
+            w = pack.waves[uid]
+            amt = op.sala * (0.5 if f.tipo in ("crash", "ride", "hihat") else 1.0)
+            by_name[name] = replace_wave(pack, uid, _with(w, sonido.sala(w.samples, w.rate, amt, op.sala_tam)))
+            f.cambios.append(f"sala {op.sala * 100:.0f} %")
+
+    # 2c. fase de las muestras estéreo (L y R distintas)
+    if op.fase:
+        import sonido
+        pares = set()
+        for el, kb, lo, hi, vlo, vhi in pack.voices[0].zones():
+            if len(kb.samples) == 2 and kb.samples[0].wave_uid != kb.samples[1].wave_uid:
+                pares.add((kb.samples[0].wave_uid, kb.samples[1].wave_uid))
+        for lu, ru in pares:
+            wl, wr = pack.waves.get(lu), pack.waves.get(ru)
+            if wl is None or wr is None:
+                continue
+            l, r, msg = sonido.corregir_fase(wl.samples, wr.samples)
+            if msg:
+                nuevo = replace_wave(pack, ru, _with(wr, r))
+                for k, v in list(by_name.items()):
+                    if v == ru:
+                        by_name[k] = nuevo
+                if wl.name in filas:
+                    filas[wl.name].cambios.append(msg)
+                reparse_voices(pack)
+
+    # 3a. nivel de referencia (como los kits del teclado)
+    if op.nivel_teclado:
+        import sonido
+        log("Nivel de referencia por pieza…")
+        for name, f in filas.items():
+            uid = by_name[name]
+            w = pack.waves[uid]
+            g = sonido.ganancia_referencia(w.samples, w.rate, f.tipo)
+            if abs(g) >= 0.5:
+                by_name[name] = replace_wave(pack, uid, _with(w, w.samples * 10 ** (g / 20)))
+                f.cambios.append(f"nivel de referencia {g:+.1f} dB")
+
     # 3. balance del kit
-    if op.balance:
+    if op.balance and not op.nivel_teclado:
         log("Balance del kit…")
         lv = {n: dsp.rms_db(pack.waves[by_name[n]].samples, pack.waves[by_name[n]].rate) for n in filas}
         ref = [lv[n] for n, f in filas.items() if f.tipo == "bombo"] or [lv[n] for n, f in filas.items() if f.tipo == "caja"]

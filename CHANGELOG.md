@@ -2,6 +2,40 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y [versionado semántico](https://semver.org/lang/es/).
 
+## [5.0.0] - 2026-11-22
+
+### Sonido
+- **Mezcla de micrófonos**: en kits multi-micrófono (cercano, abajo/afuera, overheads, sala) junta cada golpe y
+  deja elegir cuánto «ambiente» lleva. Una carpeta «OH» ya no se confunde con hi-hat abierto.
+- **Sala integrada** en las muestras (al importar y en «Mejorar kit»): suena más grande sin gastar efectos del PSR.
+- **Capas suaves mejores**: modelo de timbre por velocidad (menos brillo y ataque, más cuerpo relativo, platos que se apagan antes).
+- **Nivel como los kits del teclado**: cada pieza a un nivel de referencia para que el kit no salte al cambiar de voz.
+- **Fase estéreo**: detecta canales invertidos o desfasados (pérdida de graves en mono) y los corrige.
+
+### Teclado y Expansion Manager
+- **Compatibilidad por modelo** (S670 a S975) en «Revisión» y en la línea de comandos (`compat`).
+- **Abrir en Expansion Manager** y pasos para instalar en el PSR. El archivo de instalación lo sigue creando
+  Expansion Manager porque va cifrado para cada teclado.
+- **Asistente paso a paso** para probar en el PSR: conexión, MIDI, audio, prueba completa, calibración e informe.
+
+### Edición
+- **Biblioteca de muestras** con búsqueda, etiquetas y favoritos; añade carpetas, kits abiertos o golpes de «Importar WAV».
+- **Kit desde cero** con muestras de la biblioteca.
+- **Set del teclado**: suma varios packs contra la memoria del modelo y sugiere qué quitar si no caben.
+- **Comparar dos versiones** de un kit: qué cambió en cada tecla (capas, nivel, duración, brillo, afinación…) con A/B.
+
+### Voces
+- **Voces melódicas multisample**: detecta la nota de cada WAV (por el nombre o por el sonido), reparte el teclado
+  y crea la voz usando una plantilla de voz normal hecha en Expansion Manager (comando `voz`).
+- **Pads y sonidos sostenidos** con loop sin clics (búsqueda del mejor punto y crossfade).
+
+### App
+- **Modo En vivo** con pads grandes, ritmos, entrada MIDI y pantalla completa (F11).
+- **Demos en MP3** (o WAV) para compartir: recorrido por cada pieza y ritmos (también `demo` en la línea de comandos).
+- **Versión para macOS** (Apple Silicon) y MIDI multiplataforma (python-rtmidi fuera de Windows).
+- Más estabilidad: la recolección de memoria de Python se hace solo en el hilo de la interfaz.
+- 14 pruebas automáticas nuevas (29 en total).
+
 ## [4.0.0] - 2026-11-22
 
 Las 20 mejoras de la hoja de ruta en una sola versión.
