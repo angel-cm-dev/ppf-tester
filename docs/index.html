@@ -3,133 +3,509 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PPF Tester — Sample Lab para Yamaha PSR-S</title>
-<meta name="description" content="Crea, escucha y mejora kits de batería .ppf para Yamaha PSR-S670, S770, S775, S970 y S975. Gratis y de código abierto. Por Angel Cm.">
-<meta property="og:title" content="PPF Tester — Sample Lab para Yamaha PSR-S">
-<meta property="og:description" content="Crea, escucha y mejora kits de batería .ppf para tu Yamaha PSR-S.">
-<meta property="og:image" content="https://angel-cm-dev.github.io/ppf-tester/empty.jpg">
+<title>PPF Tester — Crea y mejora kits para tu Yamaha PSR-S</title>
+<meta name="description" content="Guía y descarga de PPF Tester: crea, escucha y mejora kits de batería y voces .ppf para Yamaha PSR-S670, S770, S775, S970 y S975. Gratis y de código abierto. Por Angel Cm.">
+<meta property="og:title" content="PPF Tester — Crea y mejora kits para tu Yamaha PSR-S">
+<meta property="og:description" content="Arrastra tus WAV, escucha cómo sonarán en tu PSR y mejóralos pieza por pieza. Gratis para Windows y Mac.">
+<meta property="og:image" content="https://angel-cm-dev.github.io/ppf-tester/live.jpg">
 <link rel="icon" href="logo.png">
 <style>
-:root{--bg:#08080a;--card:#121216;--line:#25252d;--fg:#f5f1ea;--mut:#a39fac;--gold:#f4b860;--coral:#ec6f7f;--violet:#8b6cff}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;overflow-x:hidden}
-a{color:var(--gold);text-decoration:none}
+:root{--bg:#08080a;--card:#121216;--card2:#17171d;--line:#25252d;--line2:#33333d;--fg:#f5f1ea;--mut:#a39fac;--dim:#6d6977;
+--gold:#f4b860;--coral:#ec6f7f;--violet:#8b6cff;--blue:#5aa9ff;--ok:#63d4a3;--r:18px}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"SF Pro Text",sans-serif;overflow-x:hidden}
+a{color:var(--gold);text-decoration:none}a:hover{text-decoration:underline}
+.i{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.i.s{width:18px;height:18px}.i.l{width:30px;height:30px}
+/* luces de escenario */
 .stage{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
-.light{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;animation:float 18s ease-in-out infinite}
-.l1{width:55vw;height:55vw;left:55%;top:-25%;background:radial-gradient(circle,rgba(244,184,96,.55),transparent 65%)}
-.l2{width:45vw;height:45vw;left:75%;top:55%;background:radial-gradient(circle,rgba(236,111,127,.45),transparent 65%);animation-delay:-6s}
-.l3{width:40vw;height:40vw;left:-10%;top:5%;background:radial-gradient(circle,rgba(139,108,255,.35),transparent 65%);animation-delay:-11s}
-.beam{position:absolute;top:-10%;width:14vw;height:130%;background:linear-gradient(180deg,rgba(244,184,96,.16),transparent 75%);transform-origin:top center;animation:sway 14s ease-in-out infinite}
-.b1{left:66%;transform:rotate(18deg)}.b2{left:84%;transform:rotate(6deg);background:linear-gradient(180deg,rgba(236,111,127,.13),transparent 75%);animation-delay:-5s}
+.light{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;animation:float 18s ease-in-out infinite}
+.l1{width:55vw;height:55vw;left:55%;top:-25%;background:radial-gradient(circle,rgba(244,184,96,.5),transparent 65%)}
+.l2{width:45vw;height:45vw;left:75%;top:55%;background:radial-gradient(circle,rgba(236,111,127,.4),transparent 65%);animation-delay:-6s}
+.l3{width:40vw;height:40vw;left:-10%;top:5%;background:radial-gradient(circle,rgba(139,108,255,.3),transparent 65%);animation-delay:-11s}
+.beam{position:absolute;top:-10%;width:14vw;height:130%;background:linear-gradient(180deg,rgba(244,184,96,.13),transparent 75%);transform-origin:top center;animation:sway 14s ease-in-out infinite}
+.b1{left:66%;transform:rotate(18deg)}.b2{left:84%;transform:rotate(6deg);background:linear-gradient(180deg,rgba(236,111,127,.11),transparent 75%);animation-delay:-5s}
 @keyframes float{50%{transform:translate(-4%,5%) scale(1.08)}}
 @keyframes sway{50%{transform:rotate(-8deg)}}
-@media (prefers-reduced-motion:reduce){.light,.beam{animation:none}}
-header{max-width:1120px;margin:0 auto;padding:28px 24px;display:flex;align-items:center;gap:14px}
-header img{width:44px;height:44px}
-header .brand{font-weight:300;letter-spacing:3px;font-size:20px}
-header nav{margin-left:auto;display:flex;gap:22px;font-size:15px}
-header nav a{color:var(--mut)}header nav a:hover{color:var(--fg)}
-.hero{max-width:1120px;margin:0 auto;padding:70px 24px 40px;text-align:center}
-.eyebrow{color:var(--gold);font-weight:700;letter-spacing:3px;font-size:13px}
-h1{font-size:clamp(40px,7vw,78px);font-weight:300;line-height:1.05;margin:16px 0 18px;letter-spacing:-1px}
+/* cabecera */
+header{position:sticky;top:0;z-index:10;backdrop-filter:blur(14px);background:rgba(8,8,10,.72);border-bottom:1px solid rgba(255,255,255,.05)}
+.bar{max-width:1160px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;color:var(--fg);font-weight:300;letter-spacing:3px;font-size:17px}
+.brand:hover{text-decoration:none}
+nav{margin-left:auto;display:flex;gap:22px;font-size:15px;align-items:center}
+nav a{color:var(--mut)}nav a:hover{color:var(--fg);text-decoration:none}
+nav .btn{padding:8px 16px;font-size:14px}
+/* hero */
+.hero{max-width:1160px;margin:0 auto;padding:72px 24px 30px;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--gold);font-weight:700;letter-spacing:2.5px;font-size:12.5px;text-transform:uppercase}
+h1{font-size:clamp(38px,5.6vw,66px);font-weight:300;line-height:1.05;margin:16px 0 18px;letter-spacing:-1px}
 h1 span{background:linear-gradient(90deg,var(--gold),var(--coral));-webkit-background-clip:text;background-clip:text;color:transparent}
-.lead{max-width:720px;margin:0 auto;color:var(--mut);font-size:19px}
-.cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:34px 0 16px}
-.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 26px;border-radius:12px;font-weight:700;font-size:16px;border:1px solid var(--line);color:var(--fg);background:rgba(255,255,255,.04);transition:.2s}
-.btn:hover{background:rgba(255,255,255,.08)}
+.lead{color:var(--mut);font-size:19px;margin:0}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin:30px 0 14px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:13px 22px;border-radius:12px;font-weight:700;font-size:15.5px;border:1px solid var(--line2);color:var(--fg);background:rgba(255,255,255,.04);transition:.2s}
+.btn:hover{background:rgba(255,255,255,.09);text-decoration:none}
 .btn.primary{background:linear-gradient(135deg,var(--gold),#f19a6c);color:#1a1007;border:none;box-shadow:0 10px 40px rgba(244,184,96,.25)}
 .btn.primary:hover{transform:translateY(-2px);box-shadow:0 14px 50px rgba(244,184,96,.35)}
 .small{color:var(--mut);font-size:14px}
-.shot{max-width:1120px;margin:40px auto 0;padding:0 24px}
-.shot img{width:100%;border-radius:18px;border:1px solid var(--line);box-shadow:0 40px 120px rgba(0,0,0,.6)}
-section{max-width:1120px;margin:0 auto;padding:90px 24px 10px}
-h2{font-size:38px;font-weight:300;margin:0 0 8px}
-.sub{color:var(--mut);margin:0 0 36px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
-.card{background:rgba(18,18,22,.82);border:1px solid var(--line);border-radius:16px;padding:24px;backdrop-filter:blur(6px)}
-.card h3{margin:6px 0 8px;font-size:19px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:5px 12px;background:rgba(18,18,22,.6)}
+.chip .i{width:15px;height:15px;color:var(--ok)}
+.flow{width:100%;height:auto}
+/* secciones */
+section{max-width:1160px;margin:0 auto;padding:96px 24px 0}
+.kicker{color:var(--gold);font-weight:700;letter-spacing:2.5px;font-size:12.5px;text-transform:uppercase;margin-bottom:8px}
+h2{font-size:clamp(30px,4vw,42px);font-weight:300;margin:0 0 10px;line-height:1.15}
+.sub{color:var(--mut);margin:0 0 36px;max-width:760px;font-size:17px}
+h3{margin:0 0 8px;font-size:19px}
+.card{background:rgba(18,18,22,.84);border:1px solid var(--line);border-radius:var(--r);padding:24px;backdrop-filter:blur(6px)}
 .card p{margin:0;color:var(--mut);font-size:15px}
-.card .ic{font-size:26px}
-.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
-.duo img{width:100%;border-radius:14px;border:1px solid var(--line)}
-table{width:100%;border-collapse:collapse;background:rgba(18,18,22,.82);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-th,td{padding:14px 18px;text-align:left;border-bottom:1px solid var(--line)}th{color:var(--mut);font-size:13px;letter-spacing:1px}
-ol{color:var(--mut);padding-left:22px}ol li{margin:8px 0}ol b{color:var(--fg)}
-@media (max-width:760px){header nav{display:none}}
-footer{max-width:1120px;margin:90px auto 0;padding:34px 24px 50px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;color:var(--mut);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:16px}
+.feat .ico{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;margin-bottom:14px;color:var(--gold);
+  background:linear-gradient(135deg,rgba(244,184,96,.16),rgba(236,111,127,.10));border:1px solid rgba(244,184,96,.22)}
+.feat .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--violet);margin-left:6px;vertical-align:middle}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:center}
+.diagram{width:100%;height:auto;display:block}
+.note{display:flex;gap:12px;align-items:flex-start;border-left:3px solid var(--gold);background:rgba(244,184,96,.06);padding:14px 16px;border-radius:0 12px 12px 0;color:var(--mut);font-size:15px;margin-top:18px}
+.note .i{color:var(--gold)}
+.note b{color:var(--fg)}
+.facts{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.facts li{display:flex;gap:12px;color:var(--mut)}
+.facts li b{color:var(--fg)}
+.facts .i{color:var(--gold);margin-top:2px}
+/* guías con pestañas */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.tab{display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:1px solid var(--line2);background:rgba(18,18,22,.7);color:var(--mut);padding:10px 16px;border-radius:12px;font:600 14.5px inherit;font-family:inherit}
+.tab[aria-selected=true]{color:#1a1007;background:linear-gradient(135deg,var(--gold),#f19a6c);border-color:transparent}
+.tab:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.panel{display:none}.panel.on{display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:start}
+.steps{counter-reset:s;list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.steps li{counter-increment:s;position:relative;padding:16px 18px 16px 62px;background:rgba(18,18,22,.84);border:1px solid var(--line);border-radius:14px;color:var(--mut)}
+.steps li::before{content:counter(s);position:absolute;left:16px;top:14px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#1a1007;background:linear-gradient(135deg,var(--gold),#f19a6c)}
+.steps li b{color:var(--fg)}
+.steps kbd,.k{font:600 13.5px inherit;font-family:inherit;white-space:nowrap;background:var(--card2);border:1px solid var(--line2);border-bottom-width:2px;border-radius:6px;padding:1px 6px;color:var(--fg)}
+.shotbox img{width:100%;border-radius:14px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.shotbox figcaption{color:var(--dim);font-size:13px;margin-top:8px}
+/* memoria */
+table{width:100%;border-collapse:collapse}
+.mem th,.mem td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line)}
+.mem th{color:var(--mut);font-size:12.5px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.mem tr:last-child td{border-bottom:0}
+.calc{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:16px;color:var(--mut)}
+.calc select,.calc input{background:var(--card2);color:var(--fg);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;font:inherit}
+.calc output{color:var(--fg);font-weight:700}
+.meter{height:12px;border-radius:99px;background:#202028;overflow:hidden;margin-top:10px}
+.meter i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--ok),var(--gold));transition:width .3s}
+/* glosario y faq */
+.gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.gloss dt{font-weight:700;display:flex;gap:10px;align-items:center}
+.gloss dt .i{color:var(--gold)}
+.gloss dd{margin:6px 0 0;color:var(--mut);font-size:15px}
+details{border:1px solid var(--line);border-radius:14px;background:rgba(18,18,22,.84);padding:0 20px;margin-bottom:10px}
+summary{cursor:pointer;list-style:none;padding:17px 0;font-weight:600;display:flex;align-items:center;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary .i{color:var(--gold);transition:transform .2s;margin-left:auto}
+details[open] summary .i{transform:rotate(45deg)}
+details p{color:var(--mut);margin:0 0 18px}
+/* galería y descarga */
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.gal figure{margin:0}
+.gal img{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top left;border-radius:12px;border:1px solid var(--line);display:block}
+.gal figcaption{font-size:13.5px;color:var(--mut);margin-top:8px;display:flex;gap:8px;align-items:center}
+.gal figcaption .i{width:16px;height:16px;color:var(--gold)}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.dl .card{display:flex;flex-direction:column;gap:10px}
+.dl .head{display:flex;align-items:center;gap:14px}
+.dl .head .ico{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;color:var(--gold);background:rgba(244,184,96,.1);border:1px solid rgba(244,184,96,.2)}
+.dl code{font:13px ui-monospace,Consolas,monospace;color:var(--fg);background:var(--card2);border-radius:6px;padding:2px 7px}
+.dl .btn{align-self:flex-start;margin-top:6px}
+footer{max-width:1160px;margin:100px auto 0;padding:34px 24px 50px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;color:var(--mut);font-size:14px}
+.hero>*,.two>*,.panel>*,.grid>*,.dl>*,.gal>*{min-width:0}img,svg.flow,svg.diagram{max-width:100%}
+.mem{font-size:15px}
+@media (max-width:900px){.hero,.two,.panel.on{grid-template-columns:1fr}.gal{grid-template-columns:1fr 1fr}nav a:not(.btn){display:none}}
+@media (max-width:560px){.gal{grid-template-columns:1fr}.steps li{padding-left:56px}.bar{padding:12px 16px}.brand{font-size:15px;letter-spacing:2px}.hero,section{padding-left:16px;padding-right:16px}.mem th,.mem td{padding:10px 8px}.tab{flex:1 1 auto}}
+@media (prefers-reduced-motion:reduce){.light,.beam,.anim{animation:none!important}html{scroll-behavior:auto}}
+/* animaciones del diagrama */
+.pulse{animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.dash{stroke-dasharray:6 8;animation:dash 1.6s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-28}}
 </style>
 </head>
 <body>
-<div class="stage"><div class="light l1"></div><div class="light l2"></div><div class="light l3"></div><div class="beam b1"></div><div class="beam b2"></div></div>
+
+<!-- ============================================================ iconos SVG -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <defs>
+  <linearGradient id="g-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4b860"/><stop offset="1" stop-color="#ec6f7f"/></linearGradient>
+  <linearGradient id="g-card" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c23"/><stop offset="1" stop-color="#131318"/></linearGradient>
+ </defs>
+ <symbol id="i-logo" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="none" stroke="url(#g-gold)" stroke-width="2.4"/><g stroke="#f5f1ea" stroke-width="3" stroke-linecap="round"><path d="M14 21v6"/><path d="M19 16v16"/><path d="M24 12v24"/><path d="M29 17v14"/><path d="M34 21v6"/></g></symbol>
+ <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></symbol>
+ <symbol id="i-github" viewBox="0 0 24 24"><path d="M9 19c-4 1.3-4-2-6-2.5"/><path d="M15 21v-3.4a3 3 0 0 0-.8-2.3c2.7-.3 5.6-1.3 5.6-6a4.7 4.7 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1-.3-3.4 1.3a11.6 11.6 0 0 0-6 0C6.6 2.6 5.6 2.9 5.6 2.9a4.3 4.3 0 0 0-.1 3.2 4.7 4.7 0 0 0-1.3 3.2c0 4.6 2.9 5.7 5.6 6a3 3 0 0 0-.8 2.3V21"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.8"/></symbol>
+ <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 11v5"/><path d="m9.5 13.5 2.5 2.5 2.5-2.5"/></symbol>
+ <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.6"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.6"/></symbol>
+ <symbol id="i-wand" viewBox="0 0 24 24"><path d="m4 20 11-11"/><path d="m13.5 7.5 3 3"/><path d="M17 3v3M15.5 4.5h3M20 9v2M19 10h2M8 3.5v2M7 4.5h2"/></symbol>
+ <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 4v16M15 7v10M19 10v4M21 12h0"/></symbol>
+ <symbol id="i-piano" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v14M12 5v14M16 5v14"/><path d="M6.5 5v7h3V5M14.5 5v7h3V5" fill="currentColor" stroke="none"/></symbol>
+ <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></symbol>
+ <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21M9 21h6"/></symbol>
+ <symbol id="i-books" viewBox="0 0 24 24"><rect x="3.5" y="4" width="4" height="16" rx="1"/><rect x="9" y="4" width="4" height="16" rx="1"/><path d="m15 5.2 3.9-1 3 15.5-3.9 1z"/><path d="M3.5 8h4M9 8h4"/></symbol>
+ <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/><path d="m9 9.5 11-2"/></symbol>
+ <symbol id="i-pads" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+ <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8z"/></symbol>
+ <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></symbol>
+ <symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6"/></symbol>
+ <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 4v16M7 20h10"/><path d="M5 7h14"/><path d="m5 7-3 6a3 3 0 0 0 6 0z"/><path d="m19 7-3 6a3 3 0 0 0 6 0z"/></symbol>
+ <symbol id="i-compare" viewBox="0 0 24 24"><rect x="3" y="4" width="7.5" height="16" rx="1.5"/><rect x="13.5" y="4" width="7.5" height="16" rx="1.5"/><path d="M6 9h2M6 12h2M16.5 9h2M16.5 14h2"/></symbol>
+ <symbol id="i-room" viewBox="0 0 24 24"><path d="M3 20V9l9-5 9 5v11"/><path d="M8 20v-6h8v6"/><path d="M9.5 11.5a3.5 3.5 0 0 1 5 0"/></symbol>
+ <symbol id="i-usb" viewBox="0 0 24 24"><path d="M12 3v14"/><path d="m9.5 5.5 2.5-2.5 2.5 2.5"/><path d="M12 13 7 10V8"/><circle cx="7" cy="7" r="1"/><path d="m12 11 5-2.5V7"/><rect x="16" y="5" width="2" height="2"/><circle cx="12" cy="19" r="2"/></symbol>
+ <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+ <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="10" rx="1.5"/><path d="M2.5 18.5h19l-1.5-3.5H4z"/></symbol>
+ <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></symbol>
+ <symbol id="i-velocity" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M6 20v-4M10 20v-7M14 20v-10M18 20V5"/></symbol>
+ <symbol id="i-loop" viewBox="0 0 24 24"><path d="M17 2.5 20 5.5 17 8.5"/><path d="M4 11.5v-1a5 5 0 0 1 5-5h11"/><path d="m7 21.5-3-3 3-3"/><path d="M20 12.5v1a5 5 0 0 1-5 5H4"/></symbol>
+ <symbol id="i-phase" viewBox="0 0 24 24"><path d="M2 12c2.5-6 5-6 7.5 0s5 6 7.5 0 3.5-4 5-2"/><path d="M2 12c2.5 6 5 6 7.5 0" opacity=".45"/></symbol>
+ <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 7h3.5c2.5 0 4 1.5 5.5 5s3 5 5.5 5H21"/><path d="M3 17h3.5c1.4 0 2.5-.5 3.4-1.4M14 8.4c.9-.9 2-1.4 3.4-1.4H21"/><path d="m18.5 4.5 2.5 2.5-2.5 2.5M18.5 14.5l2.5 2.5-2.5 2.5"/></symbol>
+ <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
+
+<div class="stage" aria-hidden="true"><div class="light l1"></div><div class="light l2"></div><div class="light l3"></div><div class="beam b1"></div><div class="beam b2"></div></div>
 
 <header>
-  <img src="logo.png" alt="">
-  <div class="brand">PPF TESTER</div>
-  <nav><a href="#funciones">Funciones</a><a href="#modelos">Modelos</a><a href="#como">Cómo empezar</a><a href="https://github.com/angel-cm-dev/ppf-tester">GitHub</a></nav>
+ <div class="bar">
+  <a class="brand" href="#"><svg class="i l" viewBox="0 0 48 48" aria-hidden="true"><use href="#i-logo"/></svg>PPF TESTER</a>
+  <nav>
+   <a href="#como-funciona">Cómo funciona</a><a href="#guias">Guías</a><a href="#funciones">Funciones</a><a href="#memoria">Memoria</a><a href="#faq">Preguntas</a>
+   <a class="btn primary" href="#descargar"><svg class="i s"><use href="#i-download"/></svg>Descargar</a>
+  </nav>
+ </div>
 </header>
 
+<!-- ============================================================ hero -->
 <div class="hero">
-  <div class="eyebrow">SAMPLE LAB · YAMAHA PSR-S670 · S770 · S775 · S970 · S975</div>
-  <h1>Tu batería <span>suena mejor</span><br>en tu teclado.</h1>
-  <p class="lead">Arrastra tus WAV y PPF Tester arma el kit <b>.ppf</b> para Yamaha Expansion Manager. Escúchalo como sonará en tu PSR, mejóralo pieza por pieza y ajústalo a la memoria de tu modelo.</p>
+ <div>
+  <div class="eyebrow"><svg class="i s"><use href="#i-piano"/></svg>Para Yamaha PSR-S670 · S770 · S775 · S970 · S975</div>
+  <h1>De tus WAV a <span>tu teclado</span>, sin adivinar.</h1>
+  <p class="lead">PPF Tester arma kits de batería y voces <b>.ppf</b> para Yamaha Expansion Manager, te deja <b>escuchar cómo sonarán en tu PSR</b> y los mejora pieza por pieza, cuidando la memoria de tu modelo.</p>
   <div class="cta">
-    <a class="btn primary" href="https://github.com/angel-cm-dev/ppf-tester/releases/latest">⬇ Descargar para Windows o Mac</a>
-    <a class="btn" href="https://github.com/angel-cm-dev/ppf-tester">Ver el código</a>
+   <a class="btn primary" href="#descargar"><svg class="i"><use href="#i-download"/></svg>Descargar gratis</a>
+   <a class="btn" href="#guias"><svg class="i"><use href="#i-compass"/></svg>Ver la guía paso a paso</a>
   </div>
-  <div class="small">Gratis · Código abierto (MIT) · Windows 10 / 11 · macOS (Apple Silicon)</div>
+  <div class="chips">
+   <span class="chip"><svg class="i"><use href="#i-check"/></svg>Gratis y de código abierto</span>
+   <span class="chip"><svg class="i"><use href="#i-check"/></svg>Windows 10/11 y Mac</span>
+   <span class="chip"><svg class="i"><use href="#i-check"/></svg>Español · English · Português</span>
+  </div>
+ </div>
+
+ <!-- diagrama del flujo -->
+ <svg class="flow" viewBox="0 0 520 460" role="img" aria-labelledby="flow-t">
+  <title id="flow-t">Flujo: tus WAV entran en PPF Tester, sale un archivo .ppf, Expansion Manager lo convierte y se instala en tu PSR.</title>
+  <defs>
+   <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#f4b860"/></marker>
+  </defs>
+  <g fill="none" stroke="#f4b860" stroke-width="2" marker-end="url(#ar)">
+   <path class="dash anim" d="M135 85 H190"/>
+   <path class="dash anim" d="M330 85 H385"/>
+   <path class="dash anim" d="M452 135 V185 Q452 205 432 205 H330"/>
+   <path class="dash anim" d="M190 255 H135 Q105 255 105 285 V328"/>
+  </g>
+  <!-- WAV -->
+  <g transform="translate(20 30)">
+   <rect width="115" height="110" rx="16" fill="url(#g-card)" stroke="#33333d"/>
+   <g stroke="#f5f1ea" stroke-width="2" stroke-linecap="round" opacity=".85"><path d="M25 55h4M35 45v20M45 35v40M55 42v26M65 30v50M75 44v22M85 50v10"/></g>
+   <text x="57.5" y="97" text-anchor="middle" fill="#a39fac" font-size="13" font-family="inherit">Tus WAV</text>
+  </g>
+  <!-- PPF Tester -->
+  <g transform="translate(190 20)">
+   <rect width="140" height="130" rx="18" fill="url(#g-card)" stroke="url(#g-gold)" stroke-width="1.6"/>
+   <use href="#i-logo" x="44" y="20" width="52" height="52"/>
+   <text x="70" y="96" text-anchor="middle" fill="#f5f1ea" font-size="14" font-weight="700" font-family="inherit">PPF Tester</text>
+   <text x="70" y="114" text-anchor="middle" fill="#a39fac" font-size="11.5" font-family="inherit">arma · escucha · mejora</text>
+  </g>
+  <!-- archivo .ppf -->
+  <g transform="translate(385 30)">
+   <path d="M0 14A14 14 0 0 1 14 0h56l35 35v61a14 14 0 0 1-14 14H14A14 14 0 0 1 0 96z" fill="url(#g-card)" stroke="#33333d"/>
+   <path d="M70 0v35h35" fill="none" stroke="#33333d"/>
+   <text x="52" y="72" text-anchor="middle" fill="#f4b860" font-size="22" font-weight="700" font-family="inherit">.ppf</text>
+   <text x="52" y="94" text-anchor="middle" fill="#a39fac" font-size="11.5" font-family="inherit">tu kit</text>
+  </g>
+  <!-- Expansion Manager -->
+  <g transform="translate(190 190)">
+   <rect width="140" height="130" rx="18" fill="url(#g-card)" stroke="#33333d"/>
+   <g transform="translate(46 22)" fill="none" stroke="#5aa9ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="12" width="44" height="30" rx="5"/><path d="M14 12V8a10 10 0 0 1 20 0v4"/><circle cx="24" cy="27" r="3.5"/></g>
+   <text x="70" y="92" text-anchor="middle" fill="#f5f1ea" font-size="13.5" font-weight="700" font-family="inherit">Expansion Manager</text>
+   <text x="70" y="110" text-anchor="middle" fill="#a39fac" font-size="11.5" font-family="inherit">crea el archivo cifrado</text>
+  </g>
+  <!-- PSR -->
+  <g transform="translate(20 335)">
+   <rect width="230" height="100" rx="16" fill="url(#g-card)" stroke="#33333d"/>
+   <rect x="16" y="14" width="198" height="22" rx="5" fill="#0d0d10" stroke="#33333d"/>
+   <circle class="pulse anim" cx="30" cy="25" r="4" fill="#63d4a3"/>
+   <text x="44" y="29" fill="#a39fac" font-size="11" font-family="inherit">Expansion · Pack instalado</text>
+   <g transform="translate(16 46)"><rect width="198" height="40" rx="4" fill="#ece7df"/>
+    <g fill="#1b1b21"><rect x="11" y="0" width="9" height="24" rx="1.5"/><rect x="31" y="0" width="9" height="24" rx="1.5"/><rect x="65" y="0" width="9" height="24" rx="1.5"/><rect x="85" y="0" width="9" height="24" rx="1.5"/><rect x="105" y="0" width="9" height="24" rx="1.5"/><rect x="139" y="0" width="9" height="24" rx="1.5"/><rect x="159" y="0" width="9" height="24" rx="1.5"/></g>
+    <g stroke="#c9c2b8"><path d="M18 24v16M36 24v16M54 0v40M72 24v16M90 24v16M108 24v16M126 0v40M144 24v16M162 24v16M180 0v40"/></g>
+   </g>
+   <text x="245" y="58" fill="#f5f1ea" font-size="14" font-weight="700" font-family="inherit">Tu PSR</text>
+   <text x="245" y="76" fill="#a39fac" font-size="11.5" font-family="inherit">por USB</text>
+  </g>
+ </svg>
 </div>
-<div class="shot"><img src="samples.jpg" alt="PPF Tester: pantalla de muestras"></div>
 
-<section id="funciones">
-  <h2>Todo para tus kits de batería</h2>
-  <p class="sub">Pensado para músicos de alabanza que tocan con su PSR cada semana.</p>
-  <div class="grid">
-    <div class="card"><div class="ic">📂</div><h3>Importa tus WAV</h3><p>Detecta bombo, caja, toms, hi-hat y platos por carpetas, nombres o sonido. Junta versiones y capas de velocidad, y arma el kit en las teclas estándar.</p></div>
-    <div class="card"><div class="ic">🎧</div><h3>Escucha como en el PSR</h3><p>Simulación del motor del teclado, calibrable con tu PSR real, o toca el PSR por MIDI y compara A/B.</p></div>
-    <div class="card"><div class="ic">✨</div><h3>Mejora con un clic</h3><p>EQ, ataque y compresión por pieza, balance del kit, afinación de toms, capas de velocidad y ajuste fino.</p></div>
-    <div class="card"><div class="ic">🥁</div><h3>Variación humana</h3><p>Golpes que no suenan idénticos, ritmos worship 6/8, balada 12/8 y gospel con metrónomo y swing.</p></div>
-    <div class="card"><div class="ic">🎹</div><h3>Editor de mapeo</h3><p>Arrastra sonidos entre teclas, edita rangos de velocidad, recorta y aplica fades sobre la forma de onda.</p></div>
-    <div class="card"><div class="ic">💾</div><h3>Memoria bajo control</h3><p>Calcula cuánto ocupa tu kit en cada modelo y lo ajusta solo para que entre, incluso en el S670. Suma tu set completo de packs.</p></div>
-    <div class="card"><div class="ic">🎙️</div><h3>Kits multi-micrófono</h3><p>Mezcla cercanos, overheads y sala a tu gusto, añade una sala integrada y corrige la fase de las muestras estéreo.</p></div>
-    <div class="card"><div class="ic">📚</div><h3>Biblioteca de golpes</h3><p>Guarda tus mejores muestras con etiquetas y favoritos, y arma kits nuevos desde cero.</p></div>
-    <div class="card"><div class="ic">🎼</div><h3>Voces y pads</h3><p>Pianos, cuerdas y pads desde tus WAV: detecta la nota de cada muestra y crea loops sin clics.</p></div>
-    <div class="card"><div class="ic">🔥</div><h3>Modo en vivo y demos</h3><p>Pads grandes para el ensayo y demos en MP3 de tu kit para compartir por WhatsApp.</p></div>
-    <div class="card"><div class="ic">🧭</div><h3>Asistente para tu PSR</h3><p>Te guía para conectar el teclado, probar cada tecla, calibrar la simulación y revisar la compatibilidad.</p></div>
+<!-- ============================================================ cómo funciona -->
+<section id="como-funciona">
+ <div class="kicker">Lo básico en 1 minuto</div>
+ <h2>¿Qué es un archivo .ppf y qué hace esta app?</h2>
+ <p class="sub">Tu PSR-S puede cargar sonidos nuevos (<b>packs de expansión</b>). Esos packs se preparan en el programa gratuito de Yamaha, <b>Expansion Manager</b>, y se guardan como <b>.ppf</b>. PPF Tester trabaja justo antes: arma y pule ese .ppf para que suene bien en tu teclado.</p>
+ <div class="two">
+  <div class="card">
+   <svg class="diagram" viewBox="0 0 520 300" role="img" aria-labelledby="kit-t">
+    <title id="kit-t">Un kit de batería asigna un sonido a cada tecla, y cada tecla puede tener varias capas según la fuerza del golpe.</title>
+    <text x="0" y="18" fill="#a39fac" font-size="12" letter-spacing="2" font-family="inherit">CADA TECLA, UN SONIDO</text>
+    <g transform="translate(0 32)">
+     <rect width="520" height="96" rx="8" fill="#ece7df"/>
+     <g stroke="#c9c2b8"><path d="M52 0v96M104 0v96M156 0v96M208 0v96M260 0v96M312 0v96M364 0v96M416 0v96M468 0v96"/></g>
+     <rect x="0" y="0" width="52" height="96" rx="8" fill="#f4b860" opacity=".85"/>
+     <rect x="104" y="0" width="52" height="96" fill="#f4b860" opacity=".55"/>
+     <g fill="#1b1b21"><rect x="36" width="32" height="58" rx="3"/><rect x="88" width="32" height="58" rx="3"/><rect x="192" width="32" height="58" rx="3"/><rect x="244" width="32" height="58" rx="3" fill="#ec6f7f"/><rect x="296" width="32" height="58" rx="3"/><rect x="400" width="32" height="58" rx="3"/><rect x="452" width="32" height="58" rx="3"/></g>
+     <g font-family="inherit" font-size="11.5" font-weight="700" fill="#1b1b21" text-anchor="middle"><text x="20" y="86">C1</text><text x="130" y="86">D1</text><text x="234" y="86">F1</text></g>
+    </g>
+    <g font-family="inherit" font-size="12.5" fill="#f5f1ea">
+     <path d="M20 132v22" stroke="#f4b860"/><text x="0" y="172">Bombo</text>
+     <path d="M130 132v22" stroke="#f4b860"/><text x="112" y="172">Caja</text>
+     <path d="M260 92v62" stroke="#ec6f7f"/><text x="232" y="172">Hi-hat</text>
+    </g>
+    <text x="0" y="214" fill="#a39fac" font-size="12" letter-spacing="2" font-family="inherit">CAPAS DE VELOCIDAD DE LA CAJA</text>
+    <g transform="translate(0 226)" font-family="inherit" font-size="12">
+     <rect width="170" height="56" rx="10" fill="#1c1c23" stroke="#33333d"/><text x="14" y="24" fill="#f5f1ea" font-weight="700">Suave</text><text x="14" y="42" fill="#a39fac">velocidad 1–55</text>
+     <rect x="175" width="170" height="56" rx="10" fill="#1c1c23" stroke="#33333d"/><text x="189" y="24" fill="#f5f1ea" font-weight="700">Medio</text><text x="189" y="42" fill="#a39fac">velocidad 56–99</text>
+     <rect x="350" width="170" height="56" rx="10" fill="url(#g-gold)"/><text x="364" y="24" fill="#1a1007" font-weight="700">Fuerte</text><text x="364" y="42" fill="#1a1007">velocidad 100–127</text>
+    </g>
+   </svg>
   </div>
+  <ul class="facts">
+   <li><svg class="i"><use href="#i-piano"/></svg><span><b>Un kit es un mapa de teclas.</b> El bombo suele ir en C1, la caja en D1, el hi-hat en F#1… (estándar General MIDI). La app los coloca sola.</span></li>
+   <li><svg class="i"><use href="#i-velocity"/></svg><span><b>Capas de velocidad:</b> según lo fuerte que toques, suena una grabación distinta. Así un golpe suave no es solo «más bajito», también cambia el timbre.</span></li>
+   <li><svg class="i"><use href="#i-chip"/></svg><span><b>La memoria es limitada.</b> El PSR-S670 tiene unos 32 MB para todos tus packs. La app calcula cuánto ocupa tu kit y lo ajusta para que entre.</span></li>
+   <li><svg class="i"><use href="#i-headphones"/></svg><span><b>Escuchas antes de instalar.</b> La app simula cómo lo reproduce el PSR, o lo toca en tu teclado real por USB.</span></li>
+   <li><svg class="i"><use href="#i-lock"/></svg><span><b>El último paso es de Yamaha.</b> El archivo que se instala en el teclado va cifrado para tu PSR, así que lo genera Expansion Manager a partir de tu .ppf.</span></li>
+  </ul>
+ </div>
 </section>
 
-<section>
-  <div class="duo"><img src="listen.jpg" alt="Escuchar"><img src="improve.jpg" alt="Mejorar kit"></div>
-</section>
+<!-- ============================================================ guías -->
+<section id="guias">
+ <div class="kicker">Guías paso a paso</div>
+ <h2>¿Qué quieres hacer hoy?</h2>
+ <p class="sub">Elige una tarea. Cada guía dice exactamente qué botón pulsar.</p>
+ <div class="tabs" role="tablist" aria-label="Guías">
+  <button class="tab" role="tab" aria-selected="true" aria-controls="g1" id="t1"><svg class="i s"><use href="#i-folder"/></svg>Crear un kit desde WAV</button>
+  <button class="tab" role="tab" aria-selected="false" aria-controls="g2" id="t2"><svg class="i s"><use href="#i-wand"/></svg>Mejorar un kit</button>
+  <button class="tab" role="tab" aria-selected="false" aria-controls="g3" id="t3"><svg class="i s"><use href="#i-usb"/></svg>Probar en mi PSR</button>
+  <button class="tab" role="tab" aria-selected="false" aria-controls="g4" id="t4"><svg class="i s"><use href="#i-note"/></svg>Crear una voz o pad</button>
+  <button class="tab" role="tab" aria-selected="false" aria-controls="g5" id="t5"><svg class="i s"><use href="#i-download"/></svg>Instalar en el teclado</button>
+ </div>
 
-<section id="modelos">
-  <h2>Hecho para la serie S</h2>
-  <p class="sub">El tamaño recomendado deja espacio para tus otros packs.</p>
-  <table>
-    <tr><th>MODELO</th><th>MEMORIA DE EXPANSIÓN</th><th>RECOMENDADO POR KIT</th><th>CAPAS DE VELOCIDAD</th></tr>
-    <tr><td>PSR-S670</td><td>≈ 32 MB</td><td>≤ 4 MB</td><td>2</td></tr>
-    <tr><td>PSR-S770</td><td>160 MB</td><td>≤ 20 MB</td><td>3</td></tr>
-    <tr><td>PSR-S775</td><td>280 MB</td><td>≤ 30 MB</td><td>3</td></tr>
-    <tr><td>PSR-S970</td><td>512 MB</td><td>≤ 50 MB</td><td>3</td></tr>
-    <tr><td>PSR-S975</td><td>768 MB</td><td>≤ 60 MB</td><td>3</td></tr>
-  </table>
-</section>
-
-<section id="como">
-  <h2>Cómo empezar</h2>
-  <ol>
-    <li><b>Descarga</b> el instalador o el .exe desde <a href="https://github.com/angel-cm-dev/ppf-tester/releases/latest">Releases</a>.</li>
-    <li><b>Arrastra</b> tu carpeta de WAV o tu kit .ppf a la ventana.</li>
-    <li><b>Escucha y mejora</b> el kit; elige tu modelo de PSR.</li>
-    <li><b>Ábrelo en Yamaha Expansion Manager</b>, crea el archivo de instalación y cárgalo en tu teclado.</li>
+ <div class="panel on" id="g1" role="tabpanel" aria-labelledby="t1">
+  <ol class="steps">
+   <li><b>Abre «Importar WAV»</b> y pulsa <span class="k">Elegir carpeta de WAV</span> (o arrastra la carpeta a la ventana). Sirve cualquier pack: la app lee las carpetas y nombres como <i>Kick</i>, <i>Snare</i>, <i>Toms</i>, <i>Hi Hat</i>…</li>
+   <li><b>Revisa la tabla «Tu kit».</b> Cada fila es una tecla. Para mover una pieza, arrastra la fila hasta otra tecla del piano; si estaba ocupada, se intercambian.</li>
+   <li><b>Elige tu teclado</b> arriba a la derecha (por ejemplo PSR-S670). La tarjeta «Memoria del kit» te dice si entra.</li>
+   <li><b>Ajusta el sonido</b> si quieres: «Mejorar cada pieza», «Sala» para un sonido más grande, y «Ambiente» si tu kit trae micrófonos de sala u overheads.</li>
+   <li><b>Pulsa <span class="k">Crear .ppf</span>.</b> El kit se abre solo para que lo escuches en «Escuchar» o «En vivo».</li>
   </ol>
-  <p class="small">Windows puede mostrar un aviso de SmartScreen la primera vez: «Más información» → «Ejecutar de todas formas».
-  En Mac, la primera vez abre la app con clic derecho → «Abrir».</p>
+  <figure class="shotbox"><img src="import.jpg" alt="Pantalla Importar WAV" loading="lazy"><figcaption>Importar WAV: tabla del kit, piano para mover piezas y memoria por modelo.</figcaption></figure>
+ </div>
+
+ <div class="panel" id="g2" role="tabpanel" aria-labelledby="t2">
+  <ol class="steps">
+   <li><b>Abre tu .ppf</b> con <span class="k">Abrir</span> o <span class="k">Ctrl</span>+<span class="k">O</span>.</li>
+   <li><b>Ve a «Revisión».</b> Verás errores, avisos y la compatibilidad con cada modelo: es la lista de lo que conviene arreglar.</li>
+   <li><b>En «Mejorar kit»</b> elige tu teclado y una plantilla (por ejemplo <i>Worship suave</i>) y pulsa <span class="k">Mejorar (vista previa)</span>. Nada se guarda todavía.</li>
+   <li><b>Compara</b> con <span class="k">Antes</span> y <span class="k">Después</span>. Si una pieza no te convence, usa el ajuste fino (golpe, cuerpo, brillo).</li>
+   <li><b>Guarda</b> con <span class="k">Guardar .ppf mejorado</span>: tu original nunca se sobrescribe. En «Set del teclado» puedes comparar las dos versiones tecla por tecla.</li>
+  </ol>
+  <figure class="shotbox"><img src="improve.jpg" alt="Pantalla Mejorar kit" loading="lazy"><figcaption>Mejorar kit: plantillas, opciones, Antes/Después y memoria resultante.</figcaption></figure>
+ </div>
+
+ <div class="panel" id="g3" role="tabpanel" aria-labelledby="t3">
+  <ol class="steps">
+   <li><b>Conecta el PSR</b> al ordenador con un cable USB en el puerto <b>USB TO HOST</b>. Para grabar lo que suena, lleva la salida <b>PHONES</b> a tu interfaz de audio.</li>
+   <li><b>Instala el pack</b> en el teclado (guía «Instalar en el teclado») y elige la voz en <b>RIGHT 1</b>.</li>
+   <li><b>En «Teclado», pulsa <span class="k">Asistente paso a paso</span>.</b> Te pide elegir la salida MIDI del PSR y la entrada de audio.</li>
+   <li><b>Prueba MIDI y audio:</b> el asistente toca un bombo y una caja; tú confirmas si sonó y la barra muestra si llega señal.</li>
+   <li><b>Prueba completa:</b> toca cada tecla a 3 fuerzas, avisa de notas mudas o con retraso y, si quieres, <b>calibra</b> la simulación para que suene como tu PSR. Al final guarda un informe.</li>
+  </ol>
+  <figure class="shotbox"><img src="review.jpg" alt="Pantalla Revisión" loading="lazy"><figcaption>Revisión: compatibilidad por modelo y botón para abrir Expansion Manager.</figcaption></figure>
+ </div>
+
+ <div class="panel" id="g4" role="tabpanel" aria-labelledby="t4">
+  <ol class="steps">
+   <li><b>Una sola vez:</b> en Expansion Manager crea una voz <b>normal</b> (no de batería) con cualquier WAV y guárdala como .ppf. En «Voces y pads» pulsa <span class="k">Elegir plantilla…</span> y elígela.</li>
+   <li><b>Elige el modo:</b> <i>Multisample</i> (piano, guitarra), <i>Sostenido con loop</i> (cuerdas, órgano) o <i>Pad / ambiente</i> (un solo WAV).</li>
+   <li><b>Pulsa <span class="k">Elegir WAV…</span></b> La app detecta la nota de cada archivo por su nombre (<i>Piano_C3.wav</i>) o por el sonido, y colorea en el piano la zona que cubre cada muestra.</li>
+   <li><b>Corrige</b> la nota raíz si hace falta y escucha cada zona tocando el piano.</li>
+   <li><b>Pulsa <span class="k">Crear .ppf</span></b> y ábrelo en Expansion Manager antes de instalarlo.</li>
+  </ol>
+  <figure class="shotbox"><img src="voices.jpg" alt="Pantalla Voces y pads" loading="lazy"><figcaption>Voces y pads: nota detectada, zonas del teclado y calidad del loop.</figcaption></figure>
+ </div>
+
+ <div class="panel" id="g5" role="tabpanel" aria-labelledby="t5">
+  <ol class="steps">
+   <li><b>En PPF Tester, «Revisión» → <span class="k">Expansion Manager</span>.</b> Abre el programa de Yamaha y copia la ruta de tu .ppf.</li>
+   <li><b>En Expansion Manager, importa el .ppf</b> (Import Pack) y escúchalo.</li>
+   <li><b>Añade tu teclado</b> con su archivo <i>Instrument Info</i> (se guarda desde el PSR a una memoria USB).</li>
+   <li><b>Exporta el «Pack Installation File»</b> para tu modelo y cópialo a una memoria USB.</li>
+   <li><b>En el PSR:</b> Menu → Expansion → Pack Installation, y elige el archivo.</li>
+  </ol>
+  <div>
+   <div class="note"><svg class="i"><use href="#i-bulb"/></svg><span><b>Antes de instalar:</b> instalar un archivo reemplaza <b>toda</b> la memoria de expansión. Usa «Set del teclado» para juntar en un solo paquete todo lo que quieres tener y comprobar que cabe.</span></div>
+   <figure class="shotbox" style="margin-top:18px"><img src="set.jpg" alt="Pantalla Set del teclado" loading="lazy"><figcaption>Set del teclado: memoria total de tus packs y comparación de versiones.</figcaption></figure>
+  </div>
+ </div>
+</section>
+
+<!-- ============================================================ funciones -->
+<section id="funciones">
+ <div class="kicker">Todo lo que incluye</div>
+ <h2>Herramientas pensadas para el músico de alabanza</h2>
+ <p class="sub">Cada página de la app resuelve una tarea concreta.</p>
+ <div class="grid">
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-folder"/></svg></div><h3>Importar WAV</h3><p>Detecta bombo, caja, toms, hi-hat y platos, junta versiones y capas, y arma el kit en las teclas estándar.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-headphones"/></svg></div><h3>Escuchar como en el PSR</h3><p>Simulación del motor del teclado (calibrable con el tuyo) o tu PSR real por MIDI, con comparación A/B y ritmos.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-wand"/></svg></div><h3>Mejorar con un clic</h3><p>EQ, ataque y compresión por pieza, balance, afinación de toms, capas de velocidad y plantillas como <i>Worship suave</i>.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-mic"/></svg></div><h3>Kits multi-micrófono <span class="tag">NUEVO</span></h3><p>Mezcla cercanos, overheads y sala; añade sala integrada y corrige la fase de las muestras estéreo.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-books"/></svg></div><h3>Biblioteca <span class="tag">NUEVO</span></h3><p>Guarda tus mejores golpes con etiquetas y favoritos, y arma kits nuevos desde cero.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-note"/></svg></div><h3>Voces y pads <span class="tag">NUEVO</span></h3><p>Pianos, cuerdas y pads desde tus WAV, con detección de nota y loops sin clics.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-pads"/></svg></div><h3>Modo en vivo <span class="tag">NUEVO</span></h3><p>Pads grandes para el ensayo con ratón, teclado del PC o MIDI, ritmos y pantalla completa.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-share"/></svg></div><h3>Demos en MP3 <span class="tag">NUEVO</span></h3><p>Una demo de tu kit (cada pieza y ritmos) lista para enviar por WhatsApp.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-layers"/></svg></div><h3>Set del teclado <span class="tag">NUEVO</span></h3><p>Suma todos tus packs contra la memoria del modelo y compara dos versiones de un kit.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-compass"/></svg></div><h3>Asistente para tu PSR <span class="tag">NUEVO</span></h3><p>Te guía para conectar, probar cada tecla, calibrar y revisar la compatibilidad.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-wave"/></svg></div><h3>Editor de muestras</h3><p>Mueve sonidos entre teclas, edita rangos de velocidad, recorta y aplica fades sobre la onda.</p></div>
+  <div class="card feat"><div class="ico"><svg class="i"><use href="#i-scale"/></svg></div><h3>Comparar con una referencia</h3><p>Elige un kit que te guste y la app te dice qué subir o bajar en el tuyo.</p></div>
+ </div>
+</section>
+
+<!-- ============================================================ memoria -->
+<section id="memoria">
+ <div class="kicker">Memoria de expansión</div>
+ <h2>¿Cuántos kits caben en mi teclado?</h2>
+ <p class="sub">Cada modelo tiene un espacio fijo para todos tus packs. Escribe cuánto ocupa tu kit (la app lo muestra en «Audio») y mira cuántos entran.</p>
+ <div class="two">
+  <div class="card">
+   <div class="calc">
+    <label>Mi kit ocupa <input id="mb" type="number" min="0.1" step="0.1" value="2" style="width:84px"> MB</label>
+    <label>en el <select id="mod"><option value="32">PSR-S670</option><option value="160">PSR-S770</option><option value="280">PSR-S775</option><option value="512">PSR-S970</option><option value="768">PSR-S975</option></select></label>
+   </div>
+   <p style="margin:0;color:var(--mut)">Caben <output id="out">16</output> kits como este. Uno solo ocupa el <output id="pct">6 %</output> de la memoria.</p>
+   <div class="meter" aria-hidden="true"><i id="bar" style="width:6%"></i></div>
+   <div class="note"><svg class="i"><use href="#i-bulb"/></svg><span><b>Consejo para el S670:</b> procura kits de <b>4 MB o menos</b>, con 2 capas de velocidad y platos de una sola capa. La app lo hace automáticamente si eliges ese modelo.</span></div>
+  </div>
+  <div class="card" style="padding:8px 8px">
+   <table class="mem">
+    <tr><th>Modelo</th><th>Memoria</th><th>Por kit</th><th>Capas</th></tr>
+    <tr><td><b>PSR-S670</b></td><td>≈ 32 MB</td><td>≤ 4 MB</td><td>2</td></tr>
+    <tr><td><b>PSR-S770</b></td><td>160 MB</td><td>≤ 20 MB</td><td>3</td></tr>
+    <tr><td><b>PSR-S775</b></td><td>280 MB</td><td>≤ 30 MB</td><td>3</td></tr>
+    <tr><td><b>PSR-S970</b></td><td>512 MB</td><td>≤ 50 MB</td><td>3</td></tr>
+    <tr><td><b>PSR-S975</b></td><td>768 MB</td><td>≤ 60 MB</td><td>3</td></tr>
+   </table>
+  </div>
+ </div>
+</section>
+
+<!-- ============================================================ galería -->
+<section id="capturas">
+ <div class="kicker">Así se ve</div>
+ <h2>Un recorrido por la app</h2>
+ <p class="sub">Interfaz oscura con luces de escenario (también hay tema claro).</p>
+ <div class="gal">
+  <figure><img src="live.jpg" alt="En vivo" loading="lazy"><figcaption><svg class="i"><use href="#i-pads"/></svg>En vivo: pads para el ensayo</figcaption></figure>
+  <figure><img src="library.jpg" alt="Biblioteca" loading="lazy"><figcaption><svg class="i"><use href="#i-books"/></svg>Biblioteca de muestras</figcaption></figure>
+  <figure><img src="listen.jpg" alt="Escuchar" loading="lazy"><figcaption><svg class="i"><use href="#i-headphones"/></svg>Escuchar como en el PSR</figcaption></figure>
+  <figure><img src="samples.jpg" alt="Muestras" loading="lazy"><figcaption><svg class="i"><use href="#i-wave"/></svg>Muestras y editor por tecla</figcaption></figure>
+  <figure><img src="set.jpg" alt="Set del teclado" loading="lazy"><figcaption><svg class="i"><use href="#i-layers"/></svg>Set del teclado y comparación</figcaption></figure>
+  <figure><img src="review.jpg" alt="Revisión" loading="lazy"><figcaption><svg class="i"><use href="#i-check"/></svg>Revisión y compatibilidad</figcaption></figure>
+ </div>
+</section>
+
+<!-- ============================================================ glosario -->
+<section id="glosario">
+ <div class="kicker">Glosario</div>
+ <h2>Palabras que vas a ver en la app</h2>
+ <p class="sub">Sin tecnicismos: qué significa cada cosa y por qué te importa.</p>
+ <dl class="gloss">
+  <div class="card"><dt><svg class="i"><use href="#i-velocity"/></svg>Capa de velocidad</dt><dd>Una grabación distinta según la fuerza con que tocas. Más capas = más realismo, pero más memoria.</dd></div>
+  <div class="card"><dt><svg class="i"><use href="#i-shuffle"/></svg>Variación humana</dt><dd>El PSR repite siempre la misma muestra; la app alterna versiones parecidas para que dos golpes seguidos no suenen idénticos.</dd></div>
+  <div class="card"><dt><svg class="i"><use href="#i-mic"/></svg>Overheads y sala</dt><dd>Micrófonos lejos de la batería que captan los platos y el ambiente. Mezclados con los cercanos, el kit suena «en una sala».</dd></div>
+  <div class="card"><dt><svg class="i"><use href="#i-phase"/></svg>Fase</dt><dd>Si los dos canales de una muestra estéreo se cancelan, en mono pierde graves. La app lo detecta y lo corrige.</dd></div>
+  <div class="card"><dt><svg class="i"><use href="#i-note"/></svg>Multisample</dt><dd>Varias grabaciones de un instrumento en distintas notas. Cada una cubre las teclas vecinas para que el piano suene natural.</dd></div>
+  <div class="card"><dt><svg class="i"><use href="#i-loop"/></svg>Loop</dt><dd>La parte de un sonido largo que se repite mientras mantienes la tecla. Bien hecho, no se oye ningún clic.</dd></div>
+  <div class="card"><dt><svg class="i"><use href="#i-room"/></svg>Sala integrada</dt><dd>Una reverb corta grabada dentro de la muestra: suena más grande sin usar los efectos del teclado.</dd></div>
+  <div class="card"><dt><svg class="i"><use href="#i-lock"/></svg>Pack Installation File</dt><dd>El archivo que instala el PSR. Lo crea Expansion Manager y va cifrado para tu teclado concreto.</dd></div>
+ </dl>
+</section>
+
+<!-- ============================================================ faq -->
+<section id="faq">
+ <div class="kicker">Preguntas frecuentes</div>
+ <h2>Dudas habituales</h2>
+ <p class="sub">Si tu pregunta no está aquí, usa «Ajustes → Reportar un problema» dentro de la app.</p>
+ <details><summary>¿Necesito Yamaha Expansion Manager?<svg class="i"><use href="#i-plus"/></svg></summary><p>Sí, para el último paso. PPF Tester prepara y revisa el .ppf, pero el archivo que se instala en el PSR va cifrado para tu teclado y solo lo puede crear Expansion Manager (es gratis en la web de Yamaha).</p></details>
+ <details><summary>¿Mis archivos originales se modifican?<svg class="i"><use href="#i-plus"/></svg></summary><p>No. La app nunca sobrescribe tu .ppf original: siempre guarda una copia nueva. Además puedes deshacer con Ctrl+Z.</p></details>
+ <details><summary>¿La simulación suena exactamente como mi PSR?<svg class="i"><use href="#i-plus"/></svg></summary><p>Es una aproximación muy cercana. Para que se parezca aún más, usa «Calibrar con mi PSR». Y si conectas el teclado por USB, puedes escuchar el sonido real en «Escuchar → PSR real».</p></details>
+ <details><summary>¿Qué WAV acepta?<svg class="i"><use href="#i-plus"/></svg></summary><p>Cualquier WAV: 8, 16, 24 o 32 bits, float, mono o estéreo y a cualquier frecuencia (se convierte a 44,1 kHz). Los loops y demos se ignoran solos.</p></details>
+ <details><summary>¿Sirve para teclados que no son de la serie S?<svg class="i"><use href="#i-plus"/></svg></summary><p>Está pensada y ajustada para PSR-S670, S770, S775, S970 y S975. Otros modelos compatibles con Expansion Manager pueden funcionar, pero no se han probado.</p></details>
+ <details><summary>Windows o Mac me avisan al abrirla, ¿es seguro?<svg class="i"><use href="#i-plus"/></svg></summary><p>Sí. El aviso aparece porque la app no tiene una firma comercial (cuesta dinero). En Windows pulsa «Más información → Ejecutar de todas formas»; en Mac, clic derecho → «Abrir». El código es abierto y puedes revisarlo en GitHub.</p></details>
+ <details><summary>¿Cuánto cuesta?<svg class="i"><use href="#i-plus"/></svg></summary><p>Nada. Es gratis y de código abierto (licencia MIT).</p></details>
+</section>
+
+<!-- ============================================================ descarga -->
+<section id="descargar">
+ <div class="kicker">Descarga</div>
+ <h2>Empieza en dos minutos</h2>
+ <p class="sub">Todas las versiones están en la página de <a href="https://github.com/angel-cm-dev/ppf-tester/releases/latest">Releases</a>. La app te avisa cuando hay una nueva.</p>
+ <div class="dl">
+  <div class="card">
+   <div class="head"><div class="ico"><svg class="i l"><use href="#i-monitor"/></svg></div><div><h3 style="margin:0">Windows 10 / 11</h3><div class="small">Recomendado: el instalador</div></div></div>
+   <p>Descarga <code>PPF-Tester-Setup-vX.Y.Z.exe</code> y sigue los pasos. Crea accesos directos y puedes abrir tus .ppf con clic derecho → Abrir con. ¿Sin instalar? Usa <code>PPF-Tester.exe</code>.</p>
+   <a class="btn primary" href="https://github.com/angel-cm-dev/ppf-tester/releases/latest"><svg class="i"><use href="#i-download"/></svg>Descargar para Windows</a>
+  </div>
+  <div class="card">
+   <div class="head"><div class="ico"><svg class="i l"><use href="#i-laptop"/></svg></div><div><h3 style="margin:0">Mac (Apple Silicon)</h3><div class="small">M1 o posterior</div></div></div>
+   <p>Descarga <code>PPF-Tester-vX.Y.Z-macos.zip</code>, descomprímelo y mueve <b>PPF Tester</b> a Aplicaciones. La primera vez: clic derecho → <b>Abrir</b>.</p>
+   <a class="btn primary" href="https://github.com/angel-cm-dev/ppf-tester/releases/latest"><svg class="i"><use href="#i-download"/></svg>Descargar para Mac</a>
+  </div>
+  <div class="card">
+   <div class="head"><div class="ico"><svg class="i l"><use href="#i-github"/></svg></div><div><h3 style="margin:0">Código abierto</h3><div class="small">Python · Qt · licencia MIT</div></div></div>
+   <p>Revisa el código, propón mejoras o reporta un problema. También tiene línea de comandos para procesar muchos kits a la vez.</p>
+   <a class="btn" href="https://github.com/angel-cm-dev/ppf-tester"><svg class="i"><use href="#i-github"/></svg>Ver en GitHub</a>
+  </div>
+ </div>
 </section>
 
 <footer>
-  <div>Desarrollado por <a href="https://angelcm.com"><b>Angel Cm</b></a> · <a href="https://angelcm.com">angelcm.com</a></div>
-  <div>No afiliado a Yamaha Corporation. «Yamaha», «PSR» y «Expansion Manager» son marcas de sus respectivos dueños.</div>
+ <div>Desarrollado por <a href="https://angelcm.com"><b>Angel Cm</b></a> · <a href="https://angelcm.com">angelcm.com</a></div>
+ <div>No afiliado a Yamaha Corporation. «Yamaha», «PSR» y «Expansion Manager» son marcas de sus respectivos dueños.</div>
 </footer>
+
+<script>
+// pestañas de las guías (teclado: flechas izquierda/derecha)
+const tabs=[...document.querySelectorAll('.tab')];
+function show(t){tabs.forEach(x=>{const on=x===t;x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1;
+  document.getElementById(x.getAttribute('aria-controls')).classList.toggle('on',on)})}
+tabs.forEach((t,i)=>{t.addEventListener('click',()=>show(t));
+  t.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const n=tabs[(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];show(n);n.focus()}})});
+show(tabs[0]);
+// calculadora de memoria
+const mb=document.getElementById('mb'),mod=document.getElementById('mod');
+function calc(){const k=Math.max(.01,parseFloat(mb.value)||0),m=parseFloat(mod.value),n=Math.floor(m/k),p=Math.min(100,k/m*100);
+  document.getElementById('out').textContent=n<1?'0 (no cabe)':n;document.getElementById('pct').textContent=p.toFixed(p<10?1:0)+' %';
+  document.getElementById('bar').style.width=p+'%'}
+mb.addEventListener('input',calc);mod.addEventListener('change',calc);calc();
+</script>
 </body>
 </html>
