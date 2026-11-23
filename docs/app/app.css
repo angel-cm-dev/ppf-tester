@@ -53,7 +53,7 @@ input[type=range]{accent-color:var(--gold);width:100%}
 
 /* ---------------------------------------------------- kit */
 .vacio{text-align:center;padding:40px 10px;max-width:420px;margin:0 auto}
-.vacio .grande{width:84px;height:84px;stroke:none;filter:drop-shadow(0 0 30px rgba(244,184,96,.35))}
+.vacio svg.grande{width:84px;height:84px;stroke:none;filter:drop-shadow(0 0 30px rgba(244,184,96,.35))}
 .vacio .b{margin:18px 0 10px}
 .cifras{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
 .cifras b{display:block;font-size:22px;margin-top:2px}

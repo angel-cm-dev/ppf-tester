@@ -1,8 +1,8 @@
 /* Service worker: la app funciona sin conexión después de la primera visita. */
-const VERSION = "ppf-app-2";
+const VERSION = "ppf-app-3";
 const PY = ["ppf_format", "sig", "dsp", "modelos", "sonido", "motor", "grooves", "estilos",
   "analisis", "compat", "importar_wav", "demo", "web_api"];
-const APP = ["./", "index.html", "app.css?v=2", "app.js?v=1", "audio.js?v=1", "worker.js?v=1",
+const APP = ["./", "index.html", "app.css?v=3", "app.js?v=1", "audio.js?v=1", "worker.js?v=1",
   "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png",
   ...PY.map((m) => `py/${m}.py?v=1`)];
 
