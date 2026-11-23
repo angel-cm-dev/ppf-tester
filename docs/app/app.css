@@ -31,7 +31,7 @@ main{position:fixed;top:var(--top);bottom:var(--nav);left:0;right:0;overflow:hid
 .tabs button.activa{color:var(--gold)}
 
 /* ---------------------------------------------------- controles */
-.b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line2);
+.b{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line2);
   background:var(--card2);color:var(--fg);font:600 15px system-ui,sans-serif;cursor:pointer;touch-action:manipulation}
 .b:active{transform:scale(.97)}
 .b:disabled{opacity:.4}
