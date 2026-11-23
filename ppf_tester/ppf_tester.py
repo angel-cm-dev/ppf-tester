@@ -245,15 +245,48 @@ def cmd_demo(a):
     pack = load_pack(a.archivo)
     if not pack.voices:
         sys.exit("El pack no tiene voces.")
-    ritmos = [r.strip() for r in a.ritmos.split(",") if r.strip()] if a.ritmos else ["Worship 4/4 (toms)", "Balada 4/4"]
+    est = None
+    if a.estilo:
+        import estilos
+        est = estilos.leer(a.estilo)
+    defecto = [] if est else ["Worship 4/4 (toms)", "Balada 4/4"]
+    ritmos = [r.strip() for r in a.ritmos.split(",") if r.strip()] if a.ritmos else defecto
     import grooves
     for r in ritmos:
         if r not in grooves.PATRONES:
             sys.exit(f"Ritmo desconocido: {r}. Usa: " + ", ".join(grooves.PATRONES))
     e = motor.Engine(pack, pack.voices[0])
-    x = demo.demo_kit(e, ritmos, a.bpm, a.compases, not a.sin_recorrido)
+    x = demo.demo_kit(e, ritmos, a.bpm, a.compases, not a.sin_recorrido, est)
     out = demo.guardar(a.salida or os.path.splitext(a.archivo)[0] + "_demo.mp3", x)
     print(f"Demo: {out} ({len(x) / motor.SR:.0f} s)")
+
+
+def cmd_estilo(a):
+    import estilos
+    est = estilos.leer(a.estilo)
+    num, den = est.compas
+    print(f"{est.nombre}: {est.tempo:g} BPM, {num}/{den}, {len(est.secciones)} secciones")
+    for s in est.ordenadas():
+        sec = est.secciones[s]
+        print(f"  {s:<12} {est.compases(s):>3} comp.  {len(sec.eventos):>5} golpes")
+    if not a.kit:
+        return
+    import demo
+    import motor
+    pack = load_pack(a.kit)
+    if not pack.voices:
+        sys.exit("El pack no tiene voces.")
+    disp = {n for _, _, lo, hi, _, _ in pack.voices[0].zones() for n in range(lo, hi + 1)}
+    print(estilos.resumen_faltantes(est, disp, 12) or "El kit tiene todos los sonidos que usa el estilo.")
+    if a.salida:
+        sec = [x.strip() for x in a.secciones.split(",")] if a.secciones else None
+        for x in sec or []:
+            if x not in est.secciones:
+                sys.exit(f"Sección desconocida: {x}. Usa: " + ", ".join(est.ordenadas()))
+        e = motor.Engine(pack, pack.voices[0])
+        x = demo._limitar(demo.render_estilo(e, est, sec, a.bpm))
+        out = demo.guardar(a.salida, x)
+        print(f"Audio: {out} ({len(x) / motor.SR:.0f} s)")
 
 
 def cmd_voz(a):
@@ -432,8 +465,17 @@ def main(argv=None):
     s.add_argument("--bpm", type=float, default=76)
     s.add_argument("--compases", type=int, default=4)
     s.add_argument("--sin-recorrido", action="store_true", help="No incluir el recorrido pieza por pieza")
+    s.add_argument("--estilo", help="Incluir la batería de un estilo Yamaha (.sty) tocada con el kit")
     s.add_argument("--salida", help="Archivo .mp3 o .wav")
     s.set_defaults(f=cmd_demo)
+
+    s = sub.add_parser("estilo", help="Secciones de un estilo .sty; con --kit, qué sonidos le faltan y audio del estilo con el kit.")
+    s.add_argument("estilo", help="Archivo .sty")
+    s.add_argument("--kit", help="Pack .ppf con el kit de batería")
+    s.add_argument("--secciones", help="Secciones separadas por comas (por defecto: Intro, cada Main con su Fill y Ending)")
+    s.add_argument("--bpm", type=float, help="Tempo (por defecto, el del estilo)")
+    s.add_argument("--salida", help="Archivo .mp3 o .wav con el estilo tocado por el kit")
+    s.set_defaults(f=cmd_estilo)
 
     s = sub.add_parser("voz", help="Crea una voz melódica o un pad desde WAV (necesita una plantilla de voz normal).")
     s.add_argument("entrada", help="Carpeta con una muestra por nota, o un WAV para --pad")

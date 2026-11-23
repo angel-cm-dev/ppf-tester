@@ -765,6 +765,9 @@ class LivePage(Page):
         b_demo.clicked.connect(lambda: export_demo(self.ctx))
         bl2.addWidget(b_demo)
         root.addWidget(bar)
+        from qt_estilos import PanelEstilo
+        self.sty = PanelEstilo(ctx, self._tocar_fn, al_iniciar=self._stop_groove)
+        root.addWidget(self.sty)
         self.grid_w = QWidget()
         self.grid = QGridLayout(self.grid_w)
         self.grid.setContentsMargins(0, 0, 0, 0)
@@ -788,6 +791,7 @@ class LivePage(Page):
         self.engine = motor.Engine(pack, pack.voices[0]) if pack.voices else None
         if not self.engine:
             return
+        self.sty.set_disponibles({n for _, _, lo, hi, _, _ in pack.voices[0].zones() for n in range(lo, hi + 1)})
         self.engine.settings.humanizar = self.chk_h.isChecked()
         self._vol(self.vol.value())
         notas = sorted({lo for _, _, lo, hi, _, _ in pack.voices[0].zones()})[:32]
@@ -836,20 +840,28 @@ class LivePage(Page):
                 p.glow *= 0.86
                 p.update()
 
-    def toggle_groove(self):
-        if self.player is not None:
-            self.stop()
-            return
+    def _tocar_fn(self):
         if not self.engine:
-            return
+            return None, set()
         audio = self.ctx.audio
         audio.mixer()
         bridge = self.ctx.bridge
+        disp = {n for _, _, lo, hi, _, _ in self.engine.voice.zones() for n in range(lo, hi + 1)}
 
-        def tocar(n, v):
+        def tocar(n, v, gan=1.0):
             buf, g = self.engine.render_play(n, v)
-            audio.play(buf, g, n)
+            audio.play(buf if gan >= 0.999 else (buf * gan).astype(buf.dtype), g, n)
             bridge.sig.emit(lambda _: n in self.pads and self.pads[n].flash(0.5 + 0.5 * v / 127), None)
+        return tocar, disp
+
+    def toggle_groove(self):
+        if self.player is not None:
+            self._stop_groove()
+            return
+        if not self.engine:
+            return
+        self.sty.stop()
+        tocar, _disp = self._tocar_fn()
         self.player = self.G.Reproductor(tocar, set(self.pads))
         self.player.start(self.groove.currentText(), float(self.bpm.value()))
         from idioma import tr
@@ -857,6 +869,10 @@ class LivePage(Page):
         self.b_groove.setIcon(icon("stop", "bg", 16))
 
     def stop(self):
+        self.sty.stop()
+        self._stop_groove()
+
+    def _stop_groove(self):
         if self.player is not None:
             self.player.stop()
             self.player = None
@@ -912,10 +928,15 @@ def export_demo(ctx):
     chk_rec = QCheckBox("Recorrido: cada pieza suave y fuerte")
     chk_rec.setChecked(pack.voices[0].voice_type == "DRUM_KIT")
     l.addWidget(chk_rec)
+    est = getattr(ctx, "estilo", None)
+    chk_sty = QCheckBox(f"Estilo «{est.nombre}»: Intro, cada Main con su Fill y Ending" if est else "Estilo del teclado (carga un .sty en Escuchar o En vivo)")
+    chk_sty.setEnabled(est is not None)
+    chk_sty.setChecked(est is not None)
+    l.addWidget(chk_sty)
     cbs = []
     for i, nombre in enumerate(("Worship 4/4 (toms)", "Balada 4/4", "Worship 6/8", "Pop 4/4")):
         cb = QCheckBox(f"Ritmo: {nombre}")
-        cb.setChecked(i < 2 and pack.voices[0].voice_type == "DRUM_KIT")
+        cb.setChecked(i < 2 and pack.voices[0].voice_type == "DRUM_KIT" and est is None)
         cb.setProperty("ritmo", nombre)
         cbs.append(cb)
         l.addWidget(cb)
@@ -957,8 +978,9 @@ def export_demo(ctx):
     if dlg.exec() != QDialog.DialogCode.Accepted:
         return
     ritmos = [cb.property("ritmo") for cb in cbs if cb.isChecked()]
-    if not ritmos and not chk_rec.isChecked():
-        ctx.toast("Elige al menos el recorrido o un ritmo.", "AVISO")
+    usar_sty = est if chk_sty.isChecked() else None
+    if not ritmos and not chk_rec.isChecked() and usar_sty is None:
+        ctx.toast("Elige al menos el recorrido, el estilo o un ritmo.", "AVISO")
         return
     ext = ".mp3" if fmt.currentIndex() == 0 else ".wav"
     base = os.path.splitext(pack.path)[0] + "_demo" + ext
@@ -970,7 +992,7 @@ def export_demo(ctx):
 
     def job():
         e = motor.Engine(pack, pack.voices[0])
-        x = demo.demo_kit(e, ritmos, bpm, comp, rec)
+        x = demo.demo_kit(e, ritmos, bpm, comp, rec, usar_sty)
         return demo.guardar(out, x), len(x) / motor.SR
 
     def done(res):

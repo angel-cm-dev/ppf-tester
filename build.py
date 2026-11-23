@@ -1,6 +1,7 @@
 """Construye PPF Tester con PyInstaller.
 
-Uso:  python build.py
+Uso:  python build.py          (ejecutable)
+      python build.py web      (copia el núcleo a la web app: docs/app/py)
 Windows:  dist/PPF-Tester.exe  y  dist/PPF-Tester-vX.Y.Z-windows.zip
 macOS:    dist/PPF Tester.app  y  dist/PPF-Tester-vX.Y.Z-macos.zip
 """
@@ -35,7 +36,23 @@ VSVersionInfo(
 """
 
 
+# módulos del núcleo que usa la web app (Python en el navegador con Pyodide)
+WEB_MODULOS = ["ppf_format", "sig", "dsp", "modelos", "sonido", "motor", "grooves", "estilos",
+               "analisis", "compat", "importar_wav", "demo"]
+WEB_PY = os.path.join(ROOT, "docs", "app", "py")
+
+
+def web():
+    os.makedirs(WEB_PY, exist_ok=True)
+    for m in WEB_MODULOS:
+        shutil.copyfile(os.path.join(SRC, m + ".py"), os.path.join(WEB_PY, m + ".py"))
+    print(f"Web app: {len(WEB_MODULOS)} módulos copiados a {WEB_PY}")
+
+
 def main():
+    if "web" in sys.argv[1:]:
+        web()
+        return
     build = os.path.join(ROOT, "build")
     os.makedirs(build, exist_ok=True)
     vfile = os.path.join(build, "version_info.txt")

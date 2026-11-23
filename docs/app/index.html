@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>PPF Tester · App</title>
+<meta name="description" content="Prueba tus kits .ppf de Yamaha en el móvil: pads, estilos .sty del PSR, revisión y demos para compartir.">
+<meta name="theme-color" content="#08080a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PPF Tester">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="app.css?v=1">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <defs><linearGradient id="g-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4b860"/><stop offset="1" stop-color="#ec6f7f"/></linearGradient></defs>
+ <symbol id="i-logo" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="none" stroke="url(#g-gold)" stroke-width="2.4"/><g stroke="#f5f1ea" stroke-width="3" stroke-linecap="round"><path d="M14 21v6"/><path d="M19 16v16"/><path d="M24 12v24"/><path d="M29 17v14"/><path d="M34 21v6"/></g></symbol>
+ <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/></symbol>
+ <symbol id="i-kit" viewBox="0 0 24 24"><ellipse cx="12" cy="8" rx="8" ry="3"/><path d="M4 8v8c0 1.7 3.6 3 8 3s8-1.3 8-3V8"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+ <symbol id="i-pads" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></symbol>
+ <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></symbol>
+ <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
+ <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></symbol>
+ <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.8"/></symbol>
+ <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></symbol>
+ <symbol id="i-midi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="11" r=".8"/><circle cx="16" cy="11" r=".8"/><circle cx="10" cy="15" r=".8"/><circle cx="14" cy="15" r=".8"/><circle cx="12" cy="8" r=".8"/></symbol>
+ <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></symbol>
+ <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+</svg>
+
+<header class="top">
+  <a class="marca" href="../" title="Web de PPF Tester"><svg class="logo"><use href="#i-logo"/></svg><span>PPF Tester</span></a>
+  <div class="kitnom" id="kitnom">Sin kit</div>
+  <button class="b icono" id="b-abrir" title="Abrir kit .ppf"><svg><use href="#i-folder"/></svg></button>
+</header>
+
+<main>
+  <!-- ================================================= KIT -->
+  <section class="vista activa" id="v-kit">
+    <div class="vacio" id="kit-vacio">
+      <svg class="grande"><use href="#i-logo"/></svg>
+      <h1>Tu kit en el bolsillo</h1>
+      <p>Abre un <b>.ppf</b> de Yamaha Expansion Manager para tocarlo con pads, oírlo con los <b>estilos de tu PSR</b> y revisarlo.</p>
+      <button class="b prim grande" id="b-abrir2"><svg><use href="#i-folder"/></svg>Abrir kit .ppf</button>
+      <p class="mut chico">Todo se procesa en tu teléfono: el kit no se sube a ningún sitio.</p>
+    </div>
+    <div id="kit-info" hidden>
+      <div class="tarjeta">
+        <div class="cifras">
+          <div><span class="cap">Muestras</span><b id="k-muestras">–</b></div>
+          <div><span class="cap">Memoria</span><b id="k-mb">–</b></div>
+          <div><span class="cap">Teclas</span><b id="k-notas">–</b></div>
+        </div>
+        <label class="fila" id="fila-voz" hidden><span class="cap">Voz</span><select id="sel-voz"></select></label>
+      </div>
+      <h2>Compatibilidad</h2>
+      <div class="lista" id="k-compat"></div>
+      <h2>Revisión</h2>
+      <div class="lista" id="k-problemas"></div>
+    </div>
+  </section>
+
+  <!-- ================================================= PADS -->
+  <section class="vista" id="v-pads">
+    <div class="barra">
+      <select id="sel-ritmo"></select>
+      <input type="number" id="bpm-ritmo" min="40" max="220" value="76" inputmode="numeric" aria-label="BPM">
+      <button class="b prim" id="b-ritmo"><svg><use href="#i-play"/></svg><span>Ritmo</span></button>
+      <button class="b icono" id="b-midi" title="Tocar desde un teclado MIDI" hidden><svg><use href="#i-midi"/></svg></button>
+    </div>
+    <p class="ayuda">Más abajo en el pad = golpe más fuerte.</p>
+    <div class="pads" id="pads"></div>
+  </section>
+
+  <!-- ================================================= ESTILOS -->
+  <section class="vista" id="v-estilo">
+    <div class="tarjeta">
+      <div class="fila">
+        <div class="crece">
+          <span class="cap">Estilo del teclado (.sty)</span>
+          <div id="e-nombre" class="titulo">Ningún estilo cargado</div>
+          <div id="e-datos" class="mut chico">Carga un estilo de tu PSR para oír su batería con este kit.</div>
+        </div>
+        <button class="b" id="b-sty"><svg><use href="#i-folder"/></svg>Cargar</button>
+      </div>
+      <div class="falta" id="e-falta" hidden></div>
+    </div>
+    <div class="panel-psr" id="panel">
+      <div class="grupo"><span class="cap">Intro</span><div class="botones" data-g="Intro"></div></div>
+      <div class="grupo"><span class="cap">Main</span><div class="botones" data-g="Main"></div></div>
+      <div class="grupo"><span class="cap">Fill / Break</span><div class="botones" data-g="Fill"></div></div>
+      <div class="grupo"><span class="cap">Ending</span><div class="botones" data-g="Ending"></div></div>
+    </div>
+    <div class="tarjeta controles">
+      <label class="chk"><input type="checkbox" id="chk-fill" checked><span>Auto Fill</span></label>
+      <label class="chk"><input type="checkbox" id="chk-metro"><span>Metrónomo</span></label>
+      <div class="tempo">
+        <span class="cap">Tempo</span>
+        <input type="range" id="e-tempo" min="40" max="240" value="100">
+        <b id="e-tempo-v">100</b>
+      </div>
+      <div class="ahora" id="e-ahora"></div>
+      <button class="b prim grande" id="b-start" disabled><svg><use href="#i-play"/></svg><span>Start</span></button>
+    </div>
+  </section>
+
+  <!-- ================================================= DEMO -->
+  <section class="vista" id="v-demo">
+    <div class="tarjeta">
+      <span class="cap">Demo para compartir</span>
+      <p class="mut chico">Un audio del kit con la simulación del PSR, listo para WhatsApp o redes.</p>
+      <label class="chk"><input type="checkbox" id="d-rec" checked><span>Recorrido: cada pieza suave y fuerte</span></label>
+      <label class="chk"><input type="checkbox" id="d-sty" disabled><span id="d-sty-t">Estilo cargado (Intro, cada Main con su Fill y Ending)</span></label>
+      <div id="d-ritmos"></div>
+      <label class="fila"><span class="cap">BPM de los ritmos</span><input type="number" id="d-bpm" value="76" min="50" max="180" inputmode="numeric"></label>
+      <button class="b prim grande" id="b-demo"><svg><use href="#i-share"/></svg><span>Crear demo</span></button>
+      <div id="d-res" class="mut chico"></div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <button class="activa" data-v="kit"><svg><use href="#i-kit"/></svg>Kit</button>
+  <button data-v="pads"><svg><use href="#i-pads"/></svg>Pads</button>
+  <button data-v="estilo"><svg><use href="#i-music"/></svg>Estilos</button>
+  <button data-v="demo"><svg><use href="#i-share"/></svg>Demo</button>
+</nav>
+
+<div class="carga" id="carga" hidden>
+  <div class="caja">
+    <svg class="logo girando"><use href="#i-logo"/></svg>
+    <div id="carga-t">Preparando…</div>
+    <div class="barra-p"><i id="carga-p"></i></div>
+    <div class="mut chico" id="carga-n">La primera vez descarga unos 15 MB; después funciona sin conexión.</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<input type="file" id="f-ppf" accept=".ppf" hidden>
+<input type="file" id="f-sty" accept=".sty,.prs,.sst,.bcs,.pcs,.fps,.STY" hidden>
+<script type="module" src="app.js?v=1"></script>
+</body>
+</html>

@@ -78,6 +78,35 @@ def render_ritmo(engine, nombre: str, bpm: float = 76, compases: int = 4, swing:
     return _mezclar(evs, total)
 
 
+def render_estilo(engine, estilo, secuencia=None, bpm: float | None = None, humanizar: bool = False) -> np.ndarray:
+    """La batería de un estilo Yamaha (.sty) tocada con el kit. secuencia: lista de secciones
+    (por defecto Intro, los Main con sus Fill y un Ending)."""
+    import estilos
+    sec = secuencia or estilos.secuencia_demo(estilo)
+    evs_est, dur = estilos.eventos_secuencia(estilo, sec, bpm)
+    disp = {n for el, kb, lo, hi, vlo, vhi in engine.voice.zones() for n in range(lo, hi + 1)}
+    mapa = {n: grooves.adaptar(n, disp) for n in estilo.notas()}
+    evs = []
+    rng = np.random.default_rng(5)
+    antes = engine.settings.humanizar
+    engine.settings.humanizar = humanizar
+    try:
+        for t, n, v, ch in evs_est:
+            m = mapa.get(n)
+            if m is None:
+                continue
+            buf, g = engine.render_play(m, v)
+            gan = estilo.ganancia.get(ch, 1.0)
+            if gan < 0.999:
+                buf = buf * gan
+            if humanizar:
+                t += rng.normal(0, 0.003)
+            evs.append((max(0, int(t * SR)), buf, g))
+    finally:
+        engine.settings.humanizar = antes
+    return _mezclar(evs, int((dur + 2.5) * SR))
+
+
 def render_recorrido(engine, velocidades=(60, 115), pausa_s: float = 0.45) -> np.ndarray:
     """Cada tecla del kit, suave y fuerte."""
     notas = sorted({lo for el, kb, lo, hi, vlo, vhi in engine.voice.zones()})
@@ -92,10 +121,12 @@ def render_recorrido(engine, velocidades=(60, 115), pausa_s: float = 0.45) -> np
 
 
 def demo_kit(engine, ritmos=("Worship 4/4 (toms)", "Balada 4/4"), bpm: float = 76, compases: int = 4,
-             recorrido: bool = True) -> np.ndarray:
+             recorrido: bool = True, estilo=None, bpm_estilo: float | None = None) -> np.ndarray:
     partes = []
     if recorrido:
         partes.append(render_recorrido(engine))
+    if estilo is not None:
+        partes.append(render_estilo(engine, estilo, bpm=bpm_estilo))
     for r in ritmos:
         partes.append(render_ritmo(engine, r, bpm, compases))
     silencio = np.zeros((int(SR * 0.4), 2))

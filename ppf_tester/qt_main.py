@@ -561,6 +561,7 @@ class MainWindow(QMainWindow):
             self._ind_anim = a
         if key != "listen":
             self.listen.stop_groove()
+            self.listen.sty.stop()
         if key != "live":
             self.live.stop()
 
@@ -905,6 +906,8 @@ class MainWindow(QMainWindow):
             e.ignore()
             return
         self.listen.stop_groove()
+        self.listen.sty.stop()
+        self.live.stop()
         self.audio.close()
         super().closeEvent(e)
 

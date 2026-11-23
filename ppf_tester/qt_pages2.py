@@ -163,6 +163,11 @@ class ListenPage(Page):
         gl.addWidget(self.b_groove)
         root.addWidget(gc)
 
+        # estilo del teclado (.sty)
+        from qt_estilos import PanelEstilo
+        self.sty = PanelEstilo(ctx, self._tocar_fn, al_iniciar=self.stop_groove)
+        root.addWidget(self.sty)
+
         # herramientas: variación humana, grabar loop, entrada MIDI y calibración
         tc = card()
         tl = hbox(tc, 16, 12)
@@ -241,6 +246,8 @@ class ListenPage(Page):
         self._rev_changed(r)
         notes = sorted({n for _, _, lo, hi, _, _ in pack.voices[0].zones() for n in range(lo, min(hi, lo + 60) + 1)})
         self.keymap = dict(zip(KEYS, notes))
+        self.sty.stop()
+        self.sty.set_disponibles(set(notes))
         self.piano.labels = {n: k.upper() for k, n in self.keymap.items()}
         self.piano.set_keys({n: "OK" for n in notes})
         threading.Thread(target=lambda: M._reverb_ir(M.SR, 0.8), daemon=True).start()
@@ -370,40 +377,49 @@ class ListenPage(Page):
             self.player = None
             self.b_groove.setText("  Tocar ritmo")
 
+    def _tocar_fn(self):
+        """(tocar(nota, vel, ganancia=1), notas del kit) según la fuente elegida (simulación, original o PSR)."""
+        if not self.engine:
+            return None, set()
+        src = self.source()
+        disp = set(self.keymap.values())
+        audio = self.ctx.audio
+        if src == "real":
+            midi = audio.midi(self.ctx.keyboard.midi_port())
+            ch = self.ctx.keyboard.sp_ch.value()
+
+            def tocar(n, v, gan=1.0):
+                v = int(max(1, min(127, v * gan ** 0.5)))
+                midi.note(ch, n, v)
+                threading.Timer(0.08, lambda: midi.off(ch, n)).start()
+        else:
+            audio.mixer()
+
+            def tocar(n, v, gan=1.0):
+                if src == "sim":
+                    buf, g = self.engine.render_play(n, v)
+                else:
+                    buf, _d = self._orig(n, v)
+                    g = 0
+                if buf is not None:
+                    audio.play(buf if gan >= 0.999 else (buf * gan).astype(buf.dtype), g, n)
+                self.piano.glow[n] = 1.0
+        return tocar, disp
+
     def toggle_groove(self):
         if self.player is not None:
             self.stop_groove()
             return
         if not self.engine:
             return
-        src = self.source()
-        disp = set(self.keymap.values())
-        audio = self.ctx.audio
+        self.sty.stop()
         try:
-            if src == "real":
-                midi = audio.midi(self.ctx.keyboard.midi_port())
-                ch = self.ctx.keyboard.sp_ch.value()
-
-                def tocar(n, v):
-                    midi.note(ch, n, v)
-                    threading.Timer(0.08, lambda: midi.off(ch, n)).start()
-            else:
-                audio.mixer()
-                if src == "sim":
-                    for st, n, v in self.G.PATRONES[self.groove.currentText()][2]:
-                        m = self.G.adaptar(n, disp)
-                        if m is not None:
-                            self.engine.render(m, v)
-
-                def tocar(n, v):
-                    if src == "sim":
-                        buf, g = self.engine.render_play(n, v)
-                    else:
-                        buf, _d = self._orig(n, v)
-                        g = 0
-                    if buf is not None:
-                        audio.play(buf, g, n)
-                    self.piano.glow[n] = 1.0
+            tocar, disp = self._tocar_fn()
+            if self.source() == "sim":
+                for st, n, v in self.G.PATRONES[self.groove.currentText()][2]:
+                    m = self.G.adaptar(n, disp)
+                    if m is not None:
+                        self.engine.render(m, v)
             self.player = self.G.Reproductor(tocar, disp)
             metro = None
             if self.chk_metro.isChecked():

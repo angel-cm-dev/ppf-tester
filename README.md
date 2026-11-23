@@ -21,6 +21,16 @@
   <img src="docs/samples.jpg" width="860" alt="Muestras">
 </p>
 
+## Novedades de la versión 5.1
+
+- **Estilos del teclado (.sty)**: carga un estilo de tu PSR y escucha **su batería tocada con tu kit**, con los
+  botones de la serie S: **Intro A/B/C, Main A/B/C/D, Fill (Auto Fill), Break y Ending A/B/C**. Avisa qué sonidos
+  del estilo le faltan al kit y añade el estilo a la **demo en MP3**.
+- **App para el móvil (iPhone y Android)**: [angel-cm-dev.github.io/ppf-tester/app](https://angel-cm-dev.github.io/ppf-tester/app/).
+  Web app instalable («Añadir a pantalla de inicio») que abre tus `.ppf` con pads, estilos `.sty`, revisión,
+  compatibilidad y demos para compartir. Usa el mismo motor en Python dentro del navegador (Pyodide): nada se sube
+  a ningún sitio y funciona sin conexión tras la primera visita.
+
 ## Novedades de la versión 5
 
 - **Sonido**: mezcla de micrófonos (cercano / overheads / sala) en kits multi-micrófono, **sala integrada**,
@@ -70,6 +80,7 @@
 | **Biblioteca** | Guarda tus mejores golpes, búscalos por nombre, pieza o etiqueta y arma kits nuevos desde cero. |
 | **Voces y pads** | Pianos, cuerdas o pads desde tus WAV: detecta la nota de cada muestra, reparte el teclado y crea loops sin clics. |
 | **En vivo** | Pads grandes para el ensayo (ratón, teclado del PC o MIDI), ritmos y pantalla completa. Exporta una demo en MP3. |
+| **Estilos (.sty)** | En «Escuchar» y «En vivo»: la batería de un estilo Yamaha con tu kit, con Intro, Main, Fill, Break y Ending como en el PSR. |
 | **Set del teclado** | Comprueba si todos tus packs caben juntos en la memoria del PSR y compara dos versiones de un kit. |
 | **Prueba en el teclado** | Toca todas las notas en el PSR por USB-MIDI, graba la salida y detecta notas mudas, retardos y dinámica incorrecta. |
 
@@ -129,6 +140,7 @@ python ppf_tester/ppf_tester.py mejorar-carpeta "C:\Mis kits" --modelo S670
 python ppf_tester/ppf_tester.py importar "C:\Mis WAV\Kit multi-mic" --ambiente 30 --sala 20
 python ppf_tester/ppf_tester.py compat   MI_KIT.ppf
 python ppf_tester/ppf_tester.py demo     MI_KIT.ppf --ritmos "Worship 6/8,Pop 4/4"
+python ppf_tester/ppf_tester.py estilo   MI_ESTILO.sty --kit MI_KIT.ppf --salida estilo_con_mi_kit.mp3
 python ppf_tester/ppf_tester.py voz      "C:\Mis WAV\Piano" --plantilla VOZ_NORMAL.ppf
 python ppf_tester/ppf_tester.py voz      PAD.wav --pad --ataque 0.8 --plantilla VOZ_NORMAL.ppf
 python -m unittest discover -s tests          # pruebas automáticas

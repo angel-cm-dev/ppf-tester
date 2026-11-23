@@ -2,6 +2,30 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y [versionado semántico](https://semver.org/lang/es/).
 
+## [5.1.0] - 2026-11-23
+
+### Estilos del teclado (.sty)
+- **Carga un estilo Yamaha** (.sty, .prs, .sst…) en «Escuchar» o «En vivo» y escucha la batería del estilo
+  (Rhythm 1 y 2) tocada con tu kit, con el volumen de cada canal de ritmo del estilo.
+- **Botones como en la serie PSR-S**: Intro A/B/C, Main A/B/C/D, Break y Ending A/B/C (Intro D y Ending D si el
+  estilo los trae). **Auto Fill**: al cambiar de Main suena el Fill del nuevo Main; pulsar el Main que ya suena toca
+  su Fill. Los Fill entran en el siguiente pulso; Intro, Ending y cambios sin Fill, en el siguiente compás.
+- Tempo del estilo o el tuyo; en «Escuchar» también por el PSR real (MIDI) o con las muestras originales.
+- **Aviso de sonidos que faltan**: qué notas usa el estilo que el kit no tiene (pandereta, shaker, congas…) y qué
+  parte de los golpes representan.
+- **Demo MP3 con el estilo**: Intro, cada Main con su Fill y Ending. En la línea de comandos: `estilo` y `demo --estilo`.
+- 5 pruebas automáticas nuevas (34 en total).
+
+### App para el móvil (web app)
+- **PPF Tester en iPhone, Android y el navegador** (`docs/app`, publicada en GitHub Pages): abre un `.ppf`, tócalo con
+  **pads** (más abajo = más fuerte) o con un teclado MIDI (Android/PC), ritmos de prueba, **estilos .sty** con el
+  panel Intro/Main/Fill/Break/Ending, **revisión y compatibilidad** por modelo y **demo WAV** para compartir.
+- Usa el mismo núcleo en Python (Pyodide en un worker) que la app de escritorio; el audio se toca con Web Audio,
+  con corte de hi-hat y el secuenciador con la misma lógica que el PSR. Solo se renderiza una vez cada capa de
+  velocidad real del kit, para que quepa en la memoria del teléfono.
+- **Instalable y sin conexión** (manifest + service worker). Los archivos se procesan en el teléfono.
+- `python build.py web` copia el núcleo a la web app; una prueba avisa si se queda desactualizado (37 pruebas en total).
+
 ## [5.0.0] - 2026-11-22
 
 ### Sonido

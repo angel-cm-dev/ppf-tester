@@ -44,6 +44,8 @@ Estado: ⬜ pendiente · ✅ publicada · ⏸️ requiere acción del autor
 | 37 | 2026-11-22 | 5.0.0 | **Demos en MP3** para compartir | ✅ |
 | 38 | 2026-11-22 | 5.0.0 | **Versión para Mac** (Apple Silicon) | ✅ |
 | — | — | — | **Exportar el archivo de instalación (.cpi) sin Expansion Manager**: no es posible, va cifrado para cada teclado; la app abre Expansion Manager y explica los pasos | ⏸️ |
+| 39 | 2026-11-23 | 5.1.0 | **Estilos del teclado (.sty)**: la batería del estilo con tu kit, con Intro, Main, Fill, Break y Ending | ✅ |
+| 40 | 2026-11-23 | 5.1.0 | **App para el móvil** (web app instalable para iPhone y Android: pads, estilos, revisión y demos) | ✅ |
 | — | — | — | **Firma digital del .exe** (quita el aviso de SmartScreen): requiere comprar un certificado de firma de código | ⏸️ |
 
 Desarrollado por [Angel Cm](https://angelcm.com)

@@ -396,6 +396,18 @@ T = {
     "Calibrar también la simulación con mi PSR": ("Also calibrate the simulation with my PSR",
                                                  "Calibrar também a simulação com meu PSR"),
     "Guardar informe HTML": ("Save HTML report", "Salvar relatório HTML"),
+    # ------------------------------------------------------------------ estilos (.sty)
+    "Estilo del teclado (.sty)": ("Keyboard style (.sty)", "Estilo do teclado (.sty)"),
+    "Carga un estilo de tu PSR para oír su batería con este kit.": ("Load a style from your PSR to hear its drums with this kit.", "Carregue um estilo do seu PSR para ouvir a bateria dele com este kit."),
+    "Cargar estilo…": ("Load style…", "Carregar estilo…"),
+    "Archivos .sty de tu PSR (USB o PC). Solo suena la batería del estilo, con tu kit.": ("Style files (.sty) from your PSR (USB or PC). Only the style's drums play, with your kit.", "Arquivos .sty do seu PSR (USB ou PC). Só a bateria do estilo toca, com o seu kit."),
+    "Como en el PSR: al pulsar un Main suena su Fill antes de cambiar.\nPulsar el Main que ya suena toca su Fill.": ("Like on the PSR: pressing a Main plays its Fill before switching.\nPressing the Main that is playing plays its Fill.", "Como no PSR: ao apertar um Main toca a virada dele antes de trocar.\nApertar o Main que está tocando toca a virada."),
+    "Tempo": ("Tempo", "Andamento"),
+    "Tempo original del estilo": ("Original style tempo", "Andamento original do estilo"),
+    "START/STOP del estilo": ("Style START/STOP", "START/STOP do estilo"),
+    "Elegir estilo": ("Choose style", "Escolher estilo"),
+    "Estilo del teclado (carga un .sty en Escuchar o En vivo)": ("Keyboard style (load a .sty in Listen or Live)", "Estilo do teclado (carregue um .sty em Ouvir ou Ao vivo)"),
+    "Elige al menos el recorrido, el estilo o un ritmo.": ("Choose at least the walkthrough, the style or a rhythm.", "Escolha pelo menos o percurso, o estilo ou um ritmo."),
 }
 
 
