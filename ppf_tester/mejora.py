@@ -302,3 +302,58 @@ def mejorar(pack: Pack, op: OpcionesMejora, log=lambda s: None) -> tuple[list[Fi
 def _nn(n):
     from ppf_format import note_name
     return note_name(n)
+
+
+CUERPO_HZ = {"bombo": 70, "caja": 200, "tom": 130, "hihat": 600, "ride": 500, "crash": 400, "perc": 300}
+
+
+def ajuste_fino(x: np.ndarray, sr: float, tipo: str, golpe: float, cuerpo: float, brillo: float) -> np.ndarray:
+    """golpe/cuerpo/brillo en -1..1. Mantiene el pico original."""
+    pk0 = np.abs(x).max()
+    y = x
+    if abs(golpe) > 0.01:
+        y = dsp.transient(y, sr, golpe * 0.9)
+    if abs(cuerpo) > 0.01:
+        y = dsp.peak(y, sr, CUERPO_HZ.get(tipo, 200), cuerpo * 6, 0.9)
+    if abs(brillo) > 0.01:
+        y = dsp.shelf(y, sr, 6000, brillo * 6, high=True)
+    pk = np.abs(y).max()
+    return y * (pk0 / pk) if pk > 0 else y
+
+
+PLANTILLAS = {
+    "Worship suave": dict(intensidad=0.6, correcciones=True, procesado=True, balance=True, afinar_toms=True,
+                          hihat=True, abrir_filtro=True, capas="auto"),
+    "Worship moderno": dict(intensidad=1.0, correcciones=True, procesado=True, balance=True, afinar_toms=True,
+                            hihat=True, abrir_filtro=True, capas="auto"),
+    "Rock potente": dict(intensidad=1.3, correcciones=True, procesado=True, balance=True, afinar_toms=True,
+                         hihat=True, abrir_filtro=True, capas="auto"),
+    "Natural (mínimo)": dict(intensidad=0.3, correcciones=True, procesado=True, balance=False, afinar_toms=False,
+                             hihat=True, abrir_filtro=False, capas="0"),
+    "Solo limpieza": dict(intensidad=0.0, correcciones=True, procesado=False, balance=False, afinar_toms=False,
+                          hihat=False, abrir_filtro=False, capas="0"),
+}
+
+
+def mejorar_carpeta(carpeta: str, salida: str, op: "OpcionesMejora", log=lambda s: None) -> list[tuple[str, str]]:
+    """Mejora todos los .ppf de una carpeta. Devuelve [(archivo, resultado)]."""
+    import os
+    from ppf_format import load_pack
+    os.makedirs(salida, exist_ok=True)
+    res = []
+    archivos = sorted(f for f in os.listdir(carpeta) if f.lower().endswith(".ppf"))
+    for i, f in enumerate(archivos):
+        log(f"[{i + 1}/{len(archivos)}] {f}")
+        try:
+            pack = load_pack(os.path.join(carpeta, f))
+            if not pack.voices:
+                res.append((f, "sin voces, omitido"))
+                continue
+            filas, avisos, mb0, mb1 = mejorar(pack, op)
+            out = os.path.join(salida, os.path.splitext(f)[0] + f"_PRO_{op.modelo.replace('PSR-', '')}.ppf")
+            pack.save(out)
+            chk = load_pack(out)
+            res.append((f, "error de verificación" if chk.errors else f"OK · {mb0:.2f} → {mb1:.2f} MB"))
+        except Exception as e:  # noqa: BLE001
+            res.append((f, f"error: {e}"))
+    return res

@@ -50,6 +50,56 @@ def find_keyboard_port() -> int | None:
     return None
 
 
+class MIDIINCAPSW(ctypes.Structure):
+    _fields_ = [("wMid", wintypes.WORD), ("wPid", wintypes.WORD), ("vDriverVersion", wintypes.UINT),
+                ("szPname", wintypes.WCHAR * 32), ("dwSupport", wintypes.DWORD)]
+
+
+def midi_inputs() -> list[str]:
+    mm = _winmm()
+    out = []
+    for i in range(mm.midiInGetNumDevs()):
+        caps = MIDIINCAPSW()
+        mm.midiInGetDevCapsW(i, ctypes.byref(caps), ctypes.sizeof(caps))
+        out.append(caps.szPname)
+    return out
+
+
+_MidiInProc = ctypes.WINFUNCTYPE(None, wintypes.HANDLE, wintypes.UINT, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t)
+
+
+class MidiIn:
+    """Entrada MIDI (teclado controlador o el propio PSR). on_note(nota, velocidad) se llama desde otro hilo."""
+
+    def __init__(self, port: int, on_note):
+        self.mm = _winmm()
+        self.on_note = on_note
+        self.h = wintypes.HANDLE()
+
+        def proc(h, msg, inst, p1, p2):
+            if msg == 0x3C3:                      # MIM_DATA
+                st, d1, d2 = p1 & 0xFF, (p1 >> 8) & 0x7F, (p1 >> 16) & 0x7F
+                if st & 0xF0 == 0x90 and d2 > 0:
+                    try:
+                        self.on_note(d1, d2)
+                    except Exception:  # noqa: BLE001
+                        pass
+
+        self._cb = _MidiInProc(proc)              # mantener la referencia viva
+        r = self.mm.midiInOpen(ctypes.byref(self.h), port, ctypes.cast(self._cb, ctypes.c_void_p), 0, 0x30000)
+        if r != 0:
+            raise RuntimeError(f"No se pudo abrir la entrada MIDI {port} (código {r}).")
+        self.mm.midiInStart(self.h)
+
+    def close(self):
+        try:
+            self.mm.midiInStop(self.h)
+            self.mm.midiInReset(self.h)
+            self.mm.midiInClose(self.h)
+        except Exception:  # noqa: BLE001
+            pass
+
+
 class MidiOut:
     def __init__(self, port: int):
         self.mm = _winmm()

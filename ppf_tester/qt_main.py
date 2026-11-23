@@ -29,7 +29,10 @@ from ppf_tester import _safe, _write_wav, full_analysis  # noqa: E402
 from qt_fx import FadeStack, Logo, Splash, StageBackground, Toast, caption, card, icon, paint_logo  # noqa: E402
 from qt_pages import KeyboardPage, ReviewPage, SamplesPage, btn, hbox, vbox  # noqa: E402
 from qt_pages2 import ImprovePage, ListenPage  # noqa: E402
-from qt_theme import C, dark_titlebar, font, stylesheet  # noqa: E402
+from qt_theme import C, dark_titlebar, font, rgba, set_tema, stylesheet  # noqa: E402
+import idioma  # noqa: E402
+import registro  # noqa: E402
+from idioma import tr, traducir_arbol  # noqa: E402
 from version import AUTOR, REPO, WEB, __version__ as VERSION  # noqa: E402
 
 APP = "PPF Tester"
@@ -130,7 +133,7 @@ class EmptyPage(QWidget):
         row.addStretch(1)
         c = QFrame()
         c.setObjectName("Drop")
-        c.setStyleSheet(f"QFrame#Drop {{ background: rgba(18,18,22,215); border: 1.5px dashed {C['line2']}; border-radius: 22px; }}")
+        c.setStyleSheet(f"QFrame#Drop {{ background: {rgba('card', 215)}; border: 1.5px dashed {C['line2']}; border-radius: 22px; }}")
         c.setFixedWidth(620)
         l = QVBoxLayout(c)
         l.setContentsMargins(48, 40, 48, 36)
@@ -205,11 +208,11 @@ class AboutDialog(QDialog):
         t.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(t)
         v = QLabel(f"Versión {VERSION} · Sample Lab para Yamaha PSR-S")
-        v.setStyleSheet("color: #cfc6d6; background: transparent;")
+        v.setStyleSheet(f"color: {C['mut']}; background: transparent;")
         v.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(v)
         l.addSpacing(12)
-        a = QLabel(f"Desarrollado por <b>{AUTOR}</b>")
+        a = QLabel(f"{tr('Desarrollado por')} <b>{AUTOR}</b>")
         a.setStyleSheet("font-size: 11pt; background: transparent;")
         a.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(a)
@@ -228,6 +231,7 @@ class AboutDialog(QDialog):
         lic.setStyleSheet("background: transparent; font-size: 8pt;")
         lic.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(lic)
+        traducir_arbol(self)
         dark_titlebar(self)
 
 
@@ -251,12 +255,39 @@ class SettingsDialog(QDialog):
         h.setObjectName("Mut")
         h.setWordWrap(True)
         l.addWidget(h)
+        from PySide6.QtWidgets import QComboBox, QGridLayout
+        g = QGridLayout()
+        g.addWidget(QLabel("Idioma"), 0, 0)
+        self.cb_lang = QComboBox()
+        for code, name in idioma.IDIOMAS.items():
+            self.cb_lang.addItem(name, code)
+        self.cb_lang.setCurrentIndex(list(idioma.IDIOMAS).index(s.value("idioma", "es")))
+        g.addWidget(self.cb_lang, 0, 1)
+        g.addWidget(QLabel("Tema"), 1, 0)
+        self.cb_theme = QComboBox()
+        self.cb_theme.addItem("Oscuro", "oscuro")
+        self.cb_theme.addItem("Claro", "claro")
+        self.cb_theme.setCurrentIndex(1 if s.value("tema", "oscuro") == "claro" else 0)
+        g.addWidget(self.cb_theme, 1, 1)
+        l.addLayout(g)
+        n = QLabel("El idioma y el tema se aplican al reiniciar la app.")
+        n.setObjectName("Mut")
+        l.addWidget(n)
+        tools = hbox(None, 0, 8)
+        for txt, ic, fn in (("Buscar actualizaciones", "refresh", lambda: parent.check_updates(manual=True)),
+                            ("Reportar un problema", "github", lambda: webbrowser.open(registro.url_reporte(REPO, VERSION))),
+                            ("Abrir registros", "folder", lambda: os.startfile(registro.CARPETA) if sys.platform == "win32" else None)):
+            b = btn(txt, ic)
+            b.clicked.connect(fn)
+            tools.addWidget(b)
+        l.addLayout(tools)
         row = hbox(None, 0, 8)
         row.addStretch(1)
         ok = btn("Guardar", primary=True)
         ok.clicked.connect(self.accept)
         row.addWidget(ok)
         l.addLayout(row)
+        traducir_arbol(self)
         dark_titlebar(self)
 
 
@@ -278,6 +309,7 @@ class MainWindow(QMainWindow):
         self.pack = None
         self.kits, self.waves, self.rep_by_uid = [], [], {}
         self.modified = False
+        self.undo_stack, self.redo_stack = [], []
         self.setAcceptDrops(True)
         self.resize(1440, 900)
         self.setMinimumSize(1180, 760)
@@ -301,7 +333,7 @@ class MainWindow(QMainWindow):
         # barra lateral (translúcida: deja ver las luces)
         side = QFrame()
         side.setFixedWidth(232)
-        side.setStyleSheet("QFrame#Side { background: rgba(10,10,13,170); border-right: 1px solid rgba(255,255,255,18); }")
+        side.setStyleSheet(f"QFrame#Side {{ background: {rgba('side', 170)}; border-right: 1px solid {rgba('line2', 120)}; }}")
         side.setObjectName("Side")
         sl = QVBoxLayout(side)
         sl.setContentsMargins(18, 22, 18, 16)
@@ -348,7 +380,7 @@ class MainWindow(QMainWindow):
         self.upd_btn = btn("Nueva versión disponible", "export")
         self.upd_btn.setVisible(False)
         sl.addWidget(self.upd_btn)
-        cr = QLabel(f"<span style='color:{C['mut']}'>Desarrollado por</span><br>"
+        cr = QLabel(f"<span style='color:{C['mut']}'>{tr('Desarrollado por')}</span><br>"
                     f"<a href='{WEB}' style='color:{C['gold']}; text-decoration:none; font-weight:700'>{AUTOR}</a>"
                     f"<span style='color:{C['mut']}'> · </span><a href='{WEB}' style='color:{C['fg']}'>angelcm.com</a>")
         cr.setOpenExternalLinks(True)
@@ -383,7 +415,7 @@ class MainWindow(QMainWindow):
         self.h_title.setStyleSheet("font-size: 22pt; font-weight: 300; background: transparent;")
         ht.addWidget(self.h_title)
         self.h_sub = QLabel("Abre un kit para empezar.")
-        self.h_sub.setStyleSheet(f"color: #c9c2d1; background: transparent;")
+        self.h_sub.setStyleSheet(f"color: {C['mut']}; background: transparent;")
         ht.addWidget(self.h_sub)
         head.addLayout(ht)
         head.addStretch(1)
@@ -437,14 +469,18 @@ class MainWindow(QMainWindow):
         self.toast_w = Toast(self.bg)
         self.drop_hint = QLabel("Suelta el archivo .ppf para abrirlo", self.bg)
         self.drop_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.drop_hint.setStyleSheet(f"background: rgba(8,8,10,190); border: 2px dashed {C['gold']}; border-radius: 24px;"
+        self.drop_hint.setStyleSheet(f"background: {rgba('bg', 200)}; border: 2px dashed {C['gold']}; border-radius: 24px;"
                                      " font-size: 20pt; font-weight: 300;")
         self.drop_hint.hide()
 
         QShortcut(QKeySequence.StandardKey.Open, self, activated=lambda: self.open_file())
         QShortcut(QKeySequence.StandardKey.Save, self, activated=self.save_as)
+        QShortcut(QKeySequence.StandardKey.Undo, self, activated=self.undo)
+        QShortcut(QKeySequence("Ctrl+Y"), self, activated=self.redo)
+        QShortcut(QKeySequence.StandardKey.Redo, self, activated=self.redo)
         for i, (key, _, _) in enumerate(NAV):
             QShortcut(QKeySequence(f"Ctrl+{i + 1}"), self, activated=lambda k=key: self.go(k))
+        traducir_arbol(self)
         self.logo_timer = QTimer(self)
         self.logo_timer.timeout.connect(self._pulse_logo)
         self.logo_timer.start(40)
@@ -472,8 +508,9 @@ class MainWindow(QMainWindow):
         for k, b in self.nav.items():
             b.setChecked(k == key)
         self.stats.setVisible(self.pack is not None and key != "import")
-        self.h_title.setText(page.title)
-        self.h_sub.setText(page.subtitle)
+        self.h_title.setText(tr(page.title))
+        self.h_sub.setText(tr(page.subtitle))
+        traducir_arbol(page)
         target = self.nav[key].geometry()
         self.indicator.show()
         if self.indicator.width() == 0 or not self.settings.value("anim", True, type=bool):
@@ -508,6 +545,7 @@ class MainWindow(QMainWindow):
                 self.bridge.sig.emit(done, res)
             except Exception as e:  # noqa: BLE001
                 traceback.print_exc()
+                registro.log.exception("Error en tarea de fondo")
                 msg = str(e)
 
                 def fail(_):
@@ -518,7 +556,9 @@ class MainWindow(QMainWindow):
         threading.Thread(target=work, daemon=True).start()
 
     def toast(self, msg, kind="OK", ms=3200):
-        self.toast_w.show_msg(msg, kind, ms)
+        if kind == "ERROR":
+            registro.log.warning("Aviso de error mostrado: %s", msg)
+        self.toast_w.show_msg(tr(msg), kind, ms)
 
     # ---------------------------------------------------------------- archivos
     def open_file(self, path=None):
@@ -555,12 +595,56 @@ class MainWindow(QMainWindow):
         self._set_loaded(True)
         if not keep_page:
             self.modified = False
+            self.undo_stack.clear()
+            self.redo_stack.clear()
             self.add_recent(p.path)
             self.go("samples")
             self.toast(f"{os.path.basename(p.path)} listo", "OK")
         else:
             self.go(self.current_key() or "samples")
         self.setWindowTitle(f"{APP} — {os.path.basename(p.path)}{' *' if self.modified else ''}")
+
+    # ---------------------------------------------------------------- deshacer
+    def snapshot(self):
+        """Guarda el estado actual del kit antes de un cambio (para Ctrl+Z)."""
+        if self.pack is None:
+            return
+        self.undo_stack.append((self.pack.to_bytes(), self.pack.path, self.modified))
+        del self.undo_stack[:-25]
+        self.redo_stack.clear()
+
+    def _restore(self, state):
+        from ppf_format import load_pack_bytes
+        data, path, modified = state
+        pack = load_pack_bytes(data, path)
+        kits, waves = full_analysis(pack)
+        self.modified = modified
+        row = self.samples.tbl.currentRow()
+        self._loaded((pack, kits, waves), keep_page=True)
+        if row >= 0:
+            self.samples.tbl.selectRow(min(row, self.samples.tbl.rowCount() - 1))
+
+    def undo(self):
+        if self.current_key() == "import":
+            self.importer.undo()
+            return
+        if not self.undo_stack:
+            self.toast("No hay nada que deshacer.", "INFO", 1800)
+            return
+        self.redo_stack.append((self.pack.to_bytes(), self.pack.path, self.modified))
+        self._restore(self.undo_stack.pop())
+        self.toast("Deshecho", "INFO", 1500)
+
+    def redo(self):
+        if self.current_key() == "import":
+            self.importer.redo()
+            return
+        if not self.redo_stack:
+            self.toast("No hay nada que rehacer.", "INFO", 1800)
+            return
+        self.undo_stack.append((self.pack.to_bytes(), self.pack.path, self.modified))
+        self._restore(self.redo_stack.pop())
+        self.toast("Rehecho", "INFO", 1500)
 
     def mark_modified(self, msg):
         self.modified = True
@@ -669,38 +753,103 @@ class MainWindow(QMainWindow):
         if d.exec():
             self.settings.setValue("anim", d.anim.isChecked())
             self.settings.setValue("updates", d.upd.isChecked())
+            cambio = (d.cb_lang.currentData() != self.settings.value("idioma", "es")
+                      or d.cb_theme.currentData() != self.settings.value("tema", "oscuro"))
+            self.settings.setValue("idioma", d.cb_lang.currentData())
+            self.settings.setValue("tema", d.cb_theme.currentData())
+            if cambio and QMessageBox.question(self, APP, tr("El idioma y el tema se aplican al reiniciar la app.") + "\n\n"
+                                               + tr("Reiniciar ahora") + "?") == QMessageBox.StandardButton.Yes:
+                self.restart()
+                return
             self.bg.set_animated(d.anim.isChecked())
             self.stack.animated = d.anim.isChecked()
             self.toast("Ajustes guardados", "OK")
 
-    def check_updates(self):
+    def check_updates(self, manual=False):
         def job():
             req = urllib.request.Request("https://api.github.com/repos/angel-cm-dev/ppf-tester/releases/latest",
                                          headers={"User-Agent": "PPF-Tester", "Accept": "application/vnd.github+json"})
-            with urllib.request.urlopen(req, timeout=6) as r:
-                data = json.loads(r.read().decode("utf-8"))
-            return data.get("tag_name", ""), data.get("html_url", REPO + "/releases/latest")
+            with urllib.request.urlopen(req, timeout=8) as r:
+                return json.loads(r.read().decode("utf-8"))
 
-        def done(res):
-            tag, url = res
+        def done(data):
+            tag = data.get("tag_name", "")
             try:
                 new = tuple(int(x) for x in tag.lstrip("v").split("."))
                 cur = tuple(int(x) for x in VERSION.split("."))
             except ValueError:
                 return
             if new > cur:
-                self.upd_btn.setText(f"  Actualizar a {tag}")
+                self._update_data = data
+                self.upd_btn.setText(f"  {tr('Actualizar a')} {tag}")
                 self.upd_btn.setVisible(True)
-                self.upd_btn.clicked.connect(lambda: webbrowser.open(url))
+                try:
+                    self.upd_btn.clicked.disconnect()
+                except (RuntimeError, TypeError):
+                    pass
+                self.upd_btn.clicked.connect(self.update_app)
                 self.toast(f"Hay una versión nueva: {tag}", "INFO", 6000)
+            elif manual:
+                self.toast("Tienes la última versión.", "OK")
 
         def work():
             try:
                 res = job()
                 self.bridge.sig.emit(done, res)
-            except Exception:  # noqa: BLE001
-                pass            # sin internet: no molestar
+            except Exception as e:  # noqa: BLE001
+                registro.log.info("No se pudo buscar actualizaciones: %s", e)
+                if manual:
+                    self.bridge.sig.emit(lambda _: self.toast("Sin conexión con GitHub.", "AVISO"), None)
         threading.Thread(target=work, daemon=True).start()
+
+    def update_app(self):
+        """Descarga la versión nueva y reemplaza el ejecutable al cerrar."""
+        data = getattr(self, "_update_data", None) or {}
+        tag = data.get("tag_name", "")
+        url = data.get("html_url", REPO + "/releases/latest")
+        asset = next((a for a in data.get("assets", []) if a.get("name") == "PPF-Tester.exe"), None)
+        if not getattr(sys, "frozen", False) or asset is None:
+            webbrowser.open(url)        # versión de código: abrir la página de descargas
+            return
+        if QMessageBox.question(self, APP, f"¿Descargar e instalar PPF Tester {tag}?\n\nLa app se cerrará y se abrirá la versión nueva.") != QMessageBox.StandardButton.Yes:
+            return
+        import tempfile
+        destino = os.path.join(tempfile.gettempdir(), f"PPF-Tester-{tag}.exe")
+        self.upd_btn.setEnabled(False)
+        self.toast(f"Descargando {tag}…", "INFO", 8000)
+
+        def job():
+            req = urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "PPF-Tester"})
+            with urllib.request.urlopen(req, timeout=60) as r, open(destino, "wb") as f:
+                while True:
+                    b = r.read(1 << 16)
+                    if not b:
+                        break
+                    f.write(b)
+            if os.path.getsize(destino) != asset.get("size", os.path.getsize(destino)):
+                raise RuntimeError("La descarga está incompleta.")
+            return destino
+
+        def done(nuevo):
+            import subprocess
+            exe = sys.executable
+            bat = os.path.join(os.path.dirname(nuevo), "ppf_tester_update.bat")
+            with open(bat, "w", encoding="utf-8") as f:
+                f.write("@echo off\r\n:wait\r\n"
+                        f'tasklist /FI "PID eq {os.getpid()}" | find "{os.getpid()}" >nul && (timeout /t 1 >nul & goto wait)\r\n'
+                        f'copy /Y "{nuevo}" "{exe}" >nul\r\nstart "" "{exe}"\r\ndel "%~f0"\r\n')
+            subprocess.Popen(["cmd", "/c", bat], creationflags=0x08000000 | 0x00000008)   # sin ventana, desacoplado
+            registro.log.info("Actualizando a %s", tag)
+            self.modified = False
+            self.close()
+
+        self.run_bg(job, done, lambda: self.upd_btn.setEnabled(True))
+
+    def restart(self):
+        from PySide6.QtCore import QProcess
+        args = sys.argv[1:] if getattr(sys, "frozen", False) else [os.path.abspath(__file__)] + sys.argv[1:]
+        QProcess.startDetached(sys.executable, args)
+        self.close()
 
     def closeEvent(self, e):
         if self.modified and QMessageBox.question(self, APP, "Hay cambios sin guardar. ¿Salir de todas formas?") != QMessageBox.StandardButton.Yes:
@@ -719,6 +868,10 @@ def main():
         except Exception:  # noqa: BLE001
             pass
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    registro.iniciar(VERSION)
+    pre = QSettings("AngelCm", "PPFTester")
+    set_tema(pre.value("tema", "oscuro"))
+    idioma.set_idioma(pre.value("idioma", "es"))
     app = QApplication(sys.argv)
     app.setApplicationName(APP)
     app.setOrganizationName("AngelCm")

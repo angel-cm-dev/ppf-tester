@@ -36,8 +36,19 @@ jobs:
       - name: Prueba rápida
         run: python ppf_tester/ppf_tester.py -h
 
+      - name: Pruebas automáticas
+        run: python -m unittest discover -s tests -v
+
       - name: Construir PPF-Tester.exe
         run: python build.py
+
+      - name: Crear instalador (Inno Setup)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $v = (Select-String -Path ppf_tester/version.py -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$v" installer.iss
 
       - uses: actions/upload-artifact@v4
         with:
@@ -50,5 +61,6 @@ jobs:
         with:
           files: |
             dist/PPF-Tester.exe
+            dist/PPF-Tester-Setup-*.exe
             dist/*.zip
           generate_release_notes: true

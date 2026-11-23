@@ -2,6 +2,41 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y [versionado semántico](https://semver.org/lang/es/).
 
+## [4.0.0] - 2026-11-22
+
+Las 20 mejoras de la hoja de ruta en una sola versión.
+
+### Sonido
+- **Variación humana** (round robin aproximado): al tocar, cada golpe varía un poco en afinación, volumen
+  y brillo; al importar WAV, cada tecla puede alternar hasta 3 versiones del golpe por tramos de velocidad.
+  El PSR no tiene round robin real: esto lo aproxima y ocupa más memoria.
+- **Estéreo real** por pieza al importar (Auto / Sí / No), con su coste de memoria en cada modelo.
+- **Calibrar la simulación con tu PSR**: toca unas notas por MIDI, las graba y ajusta la simulación
+  (curva de tono y respuesta a la velocidad) para que suene como tu teclado.
+- **Tocar desde un teclado MIDI** o desde el propio PSR (entrada MIDI) con el kit simulado.
+- **Más ritmos** (worship 4/4 con toms, worship 6/8 build, balada 12/8, gospel shuffle, bossa, fill de toms),
+  **metrónomo** y **swing**.
+- **Grabar un loop** de lo que tocas (simulación o PSR real) y guardarlo en WAV.
+
+### Edición
+- **Ajuste fino por pieza** (golpe, cuerpo, brillo) con Antes / Después.
+- **Plantillas de mejora**: Worship suave, Worship moderno, Rock potente, Natural, Solo limpieza y las tuyas.
+- **Mejorar una carpeta** completa de .ppf para un modelo (también por línea de comandos).
+- **Comparar con un kit de referencia**: balance entre piezas, brillo y largo de colas, con sugerencias.
+- **Deshacer / rehacer** (Ctrl+Z / Ctrl+Y) en Muestras e Importar WAV.
+- **Editor de mapeo**: arrastra una tecla a otra para mover o intercambiar su sonido y edita los rangos de velocidad.
+- **Recortes y fades manuales** sobre la forma de onda (clic izquierdo = inicio, derecho = final).
+
+### App
+- **Actualización desde la app**: descarga la versión nueva e instala con un clic (versión .exe).
+- **Registro de errores** y **reportar un problema** a GitHub con la información técnica (sin datos personales).
+- **Idiomas**: español, inglés y portugués (la interfaz; los diagnósticos detallados siguen en español).
+- **Tema claro** opcional.
+- **Instalador `PPF-Tester-Setup.exe`**: accesos directos, desinstalador y «Abrir con» para archivos .ppf
+  (sin quitarle los .ppf a Expansion Manager). Instalación por usuario, sin administrador.
+- **Página del programa** en GitHub Pages.
+- **Pruebas automáticas** (formato .ppf, audio, importación, mejora, mapeo, idiomas) en cada versión.
+
 ## [3.1.0] - 2026-11-22
 
 ### Añadido

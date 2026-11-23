@@ -13,6 +13,32 @@ C = dict(
 )
 
 
+OSCURO = dict(C)
+CLARO = dict(
+    bg="#f3efe8", side="#ebe5dc", card="#ffffff", card2="#f5f1eb", line="#e4ddd2", line2="#d3cabd",
+    fg="#1f1c24", mut="#6d6774", dim="#aaa3ad",
+    gold="#c98a2e", coral="#d65468", violet="#6c51de", blue="#2c7bd6",
+    ERROR="#d23b52", AVISO="#b7841a", INFO="#3d6fd1", OK="#23996a",
+)
+TEMA = "oscuro"
+
+
+def set_tema(nombre: str):
+    """Cambia la paleta (antes de crear la ventana)."""
+    global TEMA
+    TEMA = "claro" if nombre == "claro" else "oscuro"
+    C.update(CLARO if TEMA == "claro" else OSCURO)
+
+
+def claro() -> bool:
+    return TEMA == "claro"
+
+
+def rgba(name: str, a: int) -> str:
+    c = QColor(C.get(name, name))
+    return f"rgba({c.red()},{c.green()},{c.blue()},{a})"
+
+
 def q(name: str, alpha: int | None = None) -> QColor:
     c = QColor(C.get(name, name))
     if alpha is not None:
@@ -75,8 +101,8 @@ QLabel#Big {{ font-size: 15pt; font-weight: 600; }}
 QLabel#Link {{ color: {C['gold']}; }}
 
 QPushButton {{ background: {C['card2']}; border: 1px solid {C['line2']}; border-radius: 9px; padding: 8px 16px; }}
-QPushButton:hover {{ background: #22222a; border-color: #45454f; }}
-QPushButton:pressed {{ background: #1a1a20; }}
+QPushButton:hover {{ background: {C['line']}; border-color: {C['line2']}; }}
+QPushButton:pressed {{ background: {C['card']}; }}
 QPushButton:disabled {{ color: {C['dim']}; border-color: {C['line']}; background: {C['card']}; }}
 QPushButton#Primary {{ background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 {C['gold']}, stop:1 #f19a6c);
     color: #1a1007; border: none; font-weight: 700; }}
@@ -94,7 +120,7 @@ QRadioButton::indicator {{ width: 16px; height: 16px; border-radius: 8px; border
 QRadioButton::indicator:checked {{ background: qradialgradient(cx:.5,cy:.5,radius:.5, fx:.5,fy:.5, stop:0 {C['gold']}, stop:.45 {C['gold']}, stop:.55 {C['card2']}); border-color: {C['gold']}; }}
 
 QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit {{ background: {C['card2']}; border: 1px solid {C['line2']}; border-radius: 8px; padding: 6px 10px; min-height: 18px; }}
-QComboBox:hover, QSpinBox:hover, QDoubleSpinBox:hover, QLineEdit:hover {{ border-color: #4a4a55; }}
+QComboBox:hover, QSpinBox:hover, QDoubleSpinBox:hover, QLineEdit:hover {{ border-color: {C['dim']}; }}
 QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QLineEdit:focus {{ border-color: {C['gold']}; }}
 QComboBox::drop-down {{ border: none; width: 22px; }}
 QComboBox QAbstractItemView {{ background: {C['card2']}; border: 1px solid {C['line2']}; selection-background-color: #3a2f22; outline: 0; padding: 4px; }}
@@ -103,7 +129,7 @@ QSpinBox::up-button, QSpinBox::down-button, QDoubleSpinBox::up-button, QDoubleSp
 QSlider::groove:horizontal {{ height: 4px; background: {C['line2']}; border-radius: 2px; }}
 QSlider::sub-page:horizontal {{ background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 {C['gold']}, stop:1 {C['coral']}); border-radius: 2px; }}
 QSlider::handle:horizontal {{ background: {C['fg']}; width: 16px; height: 16px; margin: -6px 0; border-radius: 8px; }}
-QSlider::handle:horizontal:hover {{ background: #ffffff; }}
+QSlider::handle:horizontal:hover {{ background: {C['gold']}; }}
 
 QTableWidget, QListWidget, QTextBrowser {{ background: transparent; border: none; gridline-color: transparent; selection-background-color: transparent; outline: 0; }}
 QTableWidget::item {{ padding: 6px 8px; border-bottom: 1px solid {C['line']}; }}
@@ -118,7 +144,7 @@ QListWidget::item:selected {{ background: rgba(244,184,96,0.12); color: {C['fg']
 
 QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}
 QScrollBar::handle:vertical {{ background: {C['line2']}; border-radius: 4px; min-height: 30px; }}
-QScrollBar::handle:vertical:hover {{ background: #4a4a55; }}
+QScrollBar::handle:vertical:hover {{ background: {C['dim']}; }}
 QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page {{ background: none; height: 0; }}
 QScrollBar:horizontal {{ height: 0; }}
 
@@ -139,7 +165,9 @@ def dark_titlebar(widget) -> None:
             if ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, attr, ctypes.byref(val), ctypes.sizeof(val)) == 0:
                 break
         # color de la barra (Windows 11)
-        col = ctypes.c_int(0x000A0808)
+        col = ctypes.c_int(0x00E8EFF3 if TEMA == "claro" else 0x000A0808)
+        if TEMA == "claro":
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(ctypes.c_int(0)), 4)
         ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(col), ctypes.sizeof(col))
     except Exception:  # noqa: BLE001
         pass

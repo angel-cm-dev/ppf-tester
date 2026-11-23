@@ -120,8 +120,11 @@ class SamplesPage(Page):
         root = vbox(self, 0, 14)
         pc = card()
         pl = vbox(pc, 14, 8)
-        self.piano = GlowPiano(height=80)
+        from qt_import import DropPiano
+        self.piano = DropPiano(height=80)
         self.piano.keyClicked.connect(lambda n, y: self.select_note(n, play=True))
+        self.piano.dropped.connect(self._dropped)
+        self.piano.setToolTip("Arrastra una fila de la tabla hasta otra tecla para mover (o intercambiar) su sonido")
         pl.addWidget(self.piano)
         root.addWidget(pc)
 
@@ -131,6 +134,9 @@ class SamplesPage(Page):
         ll = vbox(left, 12, 6)
         ll.addWidget(caption("Teclas del kit"))
         self.tbl = table(["Tecla", "Muestra", "Pico", "Estado"], [64, None, 70, 72])
+        self.tbl.setDragEnabled(True)
+        self.tbl.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
+        self.tbl.startDrag = self._start_drag
         self.tbl.itemSelectionChanged.connect(self._on_select)
         self.tbl.cellDoubleClicked.connect(lambda r, c: self.play())
         ll.addWidget(self.tbl)
@@ -169,7 +175,44 @@ class SamplesPage(Page):
         bar.addWidget(self.b_spec)
         bar.addWidget(self.b_imp)
         wl.addLayout(bar)
+        # recortes y fades manuales
+        tr = hbox(None, 0, 8)
+        tr.addWidget(caption("Recorte"))
+        self.trim = {}
+        for k, lab, mx in (("ini", "Inicio ms", 60000), ("fin", "Fin ms", 60000), ("fi", "Fade in ms", 2000), ("fo", "Fade out ms", 5000)):
+            l = QLabel(lab)
+            l.setObjectName("Mut")
+            tr.addWidget(l)
+            sp = QSpinBox()
+            sp.setRange(0, mx)
+            sp.setFixedWidth(78)
+            sp.valueChanged.connect(self._trim_preview)
+            tr.addWidget(sp)
+            self.trim[k] = sp
+        tr.addStretch(1)
+        self.b_trim = btn("Aplicar recorte", "check")
+        self.b_trim.setToolTip("Clic izquierdo en la onda = inicio · clic derecho = final")
+        self.b_trim.clicked.connect(self.apply_trim)
+        tr.addWidget(self.b_trim)
+        wl.addLayout(tr)
+        self.wave.editable = True
+        self.wave.marksChanged.connect(self._marks_from_wave)
         right.addWidget(wc)
+
+        # capas de velocidad de la tecla
+        vc = card()
+        self.vel_l = vbox(vc, 14, 6)
+        rowv = hbox(None, 0, 8)
+        rowv.addWidget(caption("Capas de velocidad de la tecla"))
+        rowv.addStretch(1)
+        self.b_vel = btn("Aplicar rangos", "check")
+        self.b_vel.clicked.connect(self.apply_ranges)
+        rowv.addWidget(self.b_vel)
+        self.vel_l.addLayout(rowv)
+        self.vel_rows = QGridLayout()
+        self.vel_l.addLayout(self.vel_rows)
+        self.vel_spins = []
+        right.addWidget(vc)
 
         mc = card()
         ml = QGridLayout(mc)
@@ -292,6 +335,8 @@ class SamplesPage(Page):
             m["sr"].setText(f"{r.rate / 1000:.1f} kHz")
             self.probs.setHtml(problems_html(r.problems))
         self._fill_params(z)
+        self._fill_trim(w)
+        self._fill_ranges(z)
 
     def _fill_params(self, z):
         import motor
@@ -320,12 +365,142 @@ class SamplesPage(Page):
         self.piano.flash(z["note_lo"])
         self.ctx.audio.play(x.astype(np.float32))
 
+    # ------------------------------------------------------------ mapeo
+    def _start_drag(self, actions):
+        from PySide6.QtCore import QMimeData
+        from PySide6.QtGui import QDrag
+        from qt_import import MIME
+        r = self.tbl.currentRow()
+        if r < 0:
+            return
+        md = QMimeData()
+        md.setData(MIME, f"row:{r}".encode())
+        d = QDrag(self.tbl)
+        d.setMimeData(md)
+        d.exec(Qt.DropAction.MoveAction)
+
+    def _dropped(self, nota, data):
+        from ppf_format import mover_tecla, reparse_voices
+        pack = self.ctx.pack
+        if not data.startswith("row:") or pack is None or not pack.voices:
+            return
+        if pack.voices[0].voice_type != "DRUM_KIT":
+            self.ctx.toast("Mover teclas solo está disponible en drum kits.", "AVISO")
+            return
+        z = self.zones[int(data[4:])]
+        src = z["element"]
+        if src == nota:
+            return
+        self.ctx.snapshot()
+        if mover_tecla(pack, pack.voices[0], src, nota):
+            reparse_voices(pack)
+            self.ctx.mark_modified(f"{note_name(src)} ⇄ {note_name(nota)}")
+            self.select_note(nota)
+
+    def _fill_ranges(self, z):
+        from ppf_format import capas_de
+        while self.vel_rows.count():
+            it = self.vel_rows.takeAt(0)
+            if it.widget():
+                it.widget().deleteLater()
+        self.vel_spins = []
+        pack = self.ctx.pack
+        if not pack or not pack.voices:
+            return
+        capas = capas_de(pack.voices[0], z["element"])
+        for i, (lo, hi, uid) in enumerate(capas):
+            w = pack.waves.get(uid)
+            lab = QLabel(f"Capa {i + 1} · {w.name if w else '?'}")
+            self.vel_rows.addWidget(lab, i, 0)
+            a, b = QSpinBox(), QSpinBox()
+            for sp, v in ((a, lo), (b, hi)):
+                sp.setRange(1, 127)
+                sp.setValue(v)
+                sp.setFixedWidth(70)
+            self.vel_rows.addWidget(QLabel("de"), i, 1)
+            self.vel_rows.addWidget(a, i, 2)
+            self.vel_rows.addWidget(QLabel("a"), i, 3)
+            self.vel_rows.addWidget(b, i, 4)
+            self.vel_spins.append((a, b))
+        self.b_vel.setEnabled(len(capas) > 0)
+
+    def apply_ranges(self):
+        from ppf_format import fijar_rangos, reparse_voices
+        z = self.current()
+        pack = self.ctx.pack
+        if z is None or not self.vel_spins:
+            return
+        rangos = [(a.value(), b.value()) for a, b in self.vel_spins]
+        if any(lo > hi for lo, hi in rangos):
+            self.ctx.toast("Cada rango debe ir de menor a mayor.", "AVISO")
+            return
+        self.ctx.snapshot()
+        if fijar_rangos(pack, pack.voices[0], z["element"], rangos):
+            reparse_voices(pack)
+            self.ctx.mark_modified(f"Rangos de velocidad de {note_name(z['note_lo'])}")
+
+    # ------------------------------------------------------------ recortes
+    def _fill_trim(self, w):
+        if w is None:
+            return
+        dur_ms = int(w.duration * 1000)
+        for sp in self.trim.values():
+            sp.blockSignals(True)
+        self.trim["ini"].setRange(0, dur_ms)
+        self.trim["fin"].setRange(0, dur_ms)
+        self.trim["ini"].setValue(0)
+        self.trim["fin"].setValue(dur_ms)
+        self.trim["fi"].setValue(0)
+        self.trim["fo"].setValue(0)
+        for sp in self.trim.values():
+            sp.blockSignals(False)
+        self._trim_preview()
+
+    def _trim_preview(self, *_):
+        t = {k: sp.value() / 1000 for k, sp in self.trim.items()}
+        self.wave.marks = (t["ini"], t["fin"], t["fi"], t["fo"])
+        self.wave.update()
+
+    def _marks_from_wave(self, t0, t1):
+        self.trim["ini"].setValue(int(t0 * 1000))
+        self.trim["fin"].setValue(int(t1 * 1000))
+
+    def apply_trim(self):
+        import copy as _copy
+        from ppf_format import replace_wave, reparse_voices
+        z = self.current()
+        pack = self.ctx.pack
+        if z is None or pack is None:
+            return
+        w = pack.waves.get(z["uid"])
+        sr = w.rate
+        a, b = int(self.trim["ini"].value() / 1000 * sr), int(self.trim["fin"].value() / 1000 * sr)
+        if b - a < 64:
+            self.ctx.toast("El recorte es demasiado corto.", "AVISO")
+            return
+        x = w.samples[a:b].copy()
+        fi, fo = int(self.trim["fi"].value() / 1000 * sr), int(self.trim["fo"].value() / 1000 * sr)
+        if fi > 1:
+            n = min(fi, len(x))
+            x[:n] *= (0.5 - 0.5 * np.cos(np.linspace(0, np.pi, n)))[:, None]
+        if fo > 1:
+            n = min(fo, len(x))
+            x[-n:] *= (0.5 + 0.5 * np.cos(np.linspace(0, np.pi, n)))[:, None]
+        self.ctx.snapshot()
+        nw = _copy.copy(w)
+        nw.samples = x
+        nw.markers = {k: (len(x) if pos >= w.frames else max(0, min(pos - a, len(x))), nm) for k, (pos, nm) in w.markers.items()}
+        replace_wave(pack, z["uid"], nw)
+        reparse_voices(pack)
+        self.ctx.mark_modified(f"'{w.name}' recortada a {len(x) / sr:.2f} s")
+
     def apply_params(self):
         from ppf_format import edit_element, reparse_voices
         z = self.current()
         pack = self.ctx.pack
         if z is None or pack is None:
             return
+        self.ctx.snapshot()
         v = pack.voices[0]
         n = z["element"]
         edit_element(pack, v, n, "pitchBlock", "tuneCoarse", int(self.ed["tune"].value()))
@@ -366,6 +541,7 @@ class SamplesPage(Page):
             QMessageBox.warning(self, "PPF Tester", f"No se pudo leer el WAV (usa PCM 16/24/32 bits):\n{e}")
             return
         pack = self.ctx.pack
+        self.ctx.snapshot()
         old = pack.waves[z["uid"]]
         x = dsp.to_rate(x, sr, 44100)
         x = x[:, :1] if old.channels == 1 else (x if x.shape[1] == 2 else np.repeat(x, 2, axis=1))
@@ -403,6 +579,20 @@ class ReviewPage(Page):
         self.kit = text_view(120)
         l.addWidget(self.kit)
         root.addWidget(c, 1)
+        c3 = card()
+        l3 = vbox(c3, 18, 8)
+        rowr = hbox(None, 0, 8)
+        rowr.addWidget(caption("Comparar con un kit de referencia"))
+        rowr.addStretch(1)
+        b_ref = btn("Elegir kit de referencia…", "folder")
+        b_ref.clicked.connect(self.compare_ref)
+        rowr.addWidget(b_ref)
+        l3.addLayout(rowr)
+        self.ref = text_view(90)
+        self.ref.setHtml(f"<p style='color:{C['mut']}'>Elige un .ppf que te guste cómo suena y te digo qué cambiar en el tuyo "
+                         "(balance entre piezas, brillo y largo de las colas).</p>")
+        l3.addWidget(self.ref)
+        root.addWidget(c3, 1)
         c2 = card()
         l2 = vbox(c2, 18, 8)
         l2.addWidget(caption("Muestras con observaciones"))
@@ -423,6 +613,27 @@ class ReviewPage(Page):
             if w.problems:
                 parts.append(f"<p style='margin:10px 0 2px 0; font-weight:700'>{w.name}</p>" + problems_html(w.problems))
         self.samples.setHtml("".join(parts) or problems_html([], "Todas las muestras están bien."))
+
+    def compare_ref(self):
+        import referencia
+        from ppf_format import load_pack
+        path, _ = QFileDialog.getOpenFileName(self, "Kit de referencia", "", "Yamaha Expansion Manager (*.ppf)")
+        if not path or self.ctx.pack is None:
+            return
+        mio = self.ctx.pack
+
+        def done(filas):
+            def celda(v):
+                return "—" if not v else f"{v['rel']:+.1f} dB · {v['brillo'] / 1000:.1f} kHz · {v['dur']:.1f} s"
+            rows = "".join(
+                f"<tr><td style='padding:4px 12px 4px 0; font-weight:700'>{f['tipo']}</td><td style='padding-right:12px'>{celda(f['mio'])}</td>"
+                f"<td style='padding-right:12px'>{celda(f['ref'])}</td>"
+                f"<td style='color:{C['AVISO'] if f['consejos'] else C['OK']}'>{', '.join(f['consejos']) or 'parecido'}</td></tr>" for f in filas)
+            self.ref.setHtml(f"<p style='color:{C['mut']}'>Referencia: {os.path.basename(path)} · nivel relativo al bombo · brillo · duración</p>"
+                             f"<table cellspacing=0><tr style='color:{C['mut']}'><td>Pieza</td><td>Tu kit</td><td>Referencia</td><td>Sugerencia</td></tr>{rows}</table>")
+            self.ctx.toast("Comparación lista", "OK")
+
+        self.ctx.run_bg(lambda: referencia.comparar(mio, load_pack(path)), done)
 
 
 # ==================================================================== teclado

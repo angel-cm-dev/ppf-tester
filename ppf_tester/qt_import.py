@@ -107,6 +107,7 @@ class ImportPage(Page):
         self.piezas: list[I.Pieza] = []
         self.carpeta = ""
         self._loading = False
+        self._undo, self._redo = [], []
         root = vbox(self, 0, 12)
 
         # ---- barra superior
@@ -192,8 +193,8 @@ class ImportPage(Page):
         b_del.clicked.connect(self.remove_selected)
         row.addWidget(b_del)
         kl.addLayout(row)
-        self.tbl = KitTable(0, 9)
-        self.tbl.setHorizontalHeaderLabels(["", "Usar", "Tecla", "Pieza", "Muestra", "Versión", "Capas", "Afin.", ""])
+        self.tbl = KitTable(0, 11)
+        self.tbl.setHorizontalHeaderLabels(["", "Usar", "Tecla", "Pieza", "Muestra", "Versión", "Capas", "Variar", "Estéreo", "Afin.", ""])
         self.tbl.verticalHeader().setVisible(False)
         self.tbl.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tbl.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -201,13 +202,13 @@ class ImportPage(Page):
         self.tbl.setShowGrid(False)
         self.tbl.verticalHeader().setDefaultSectionSize(40)
         hh = self.tbl.horizontalHeader()
-        for i, w in enumerate((26, 44, 170, 135, 0, 70, 62, 62, 40)):
+        for i, w in enumerate((24, 40, 150, 112, 0, 58, 54, 54, 76, 56, 34)):
             hh.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch if w == 0 else QHeaderView.ResizeMode.Fixed)
             if w:
                 self.tbl.setColumnWidth(i, w)
         self.tbl.itemSelectionChanged.connect(self._sel)
         kl.addWidget(self.tbl)
-        body.addWidget(kc, 3)
+        body.addWidget(kc, 7)
 
         side = QVBoxLayout()
         side.setSpacing(12)
@@ -242,7 +243,10 @@ class ImportPage(Page):
         self.lbl_steps.setWordWrap(True)
         ml.addWidget(self.lbl_steps)
         side.addWidget(mc, 2)
-        body.addLayout(side, 2)
+        side_w = QWidget()
+        side_w.setLayout(side)
+        side_w.setMaximumWidth(400)
+        body.addWidget(side_w, 3)
 
         self.est_timer = QTimer(self)
         self.est_timer.setSingleShot(True)
@@ -305,9 +309,38 @@ class ImportPage(Page):
                 top.addChild(it)
             self.tree.addTopLevelItem(top)
 
+    # ------------------------------------------------------------ deshacer
+    def _snap(self):
+        import dataclasses
+        self._undo.append([dataclasses.replace(p) for p in self.piezas])
+        del self._undo[:-30]
+        self._redo.clear()
+
+    def undo(self):
+        import dataclasses
+        if not self._undo:
+            self.ctx.toast("No hay nada que deshacer.", "INFO", 1800)
+            return
+        self._redo.append([dataclasses.replace(p) for p in self.piezas])
+        self.piezas = self._undo.pop()
+        self.refresh()
+        self.ctx.toast("Deshecho", "INFO", 1500)
+
+    def redo(self):
+        import dataclasses
+        if not self._redo:
+            self.ctx.toast("No hay nada que rehacer.", "INFO", 1800)
+            return
+        self._undo.append([dataclasses.replace(p) for p in self.piezas])
+        self.piezas = self._redo.pop()
+        self.refresh()
+        self.ctx.toast("Rehecho", "INFO", 1500)
+
     def auto(self):
         if not self.grupos:
             return
+        if self.piezas:
+            self._snap()
         self.piezas = I.auto_kit(self.grupos, self.chk_gm.isChecked())
         self.refresh()
 
@@ -363,17 +396,32 @@ class ImportPage(Page):
             sc.setToolTip("Capas de velocidad: golpes suaves y fuertes distintos")
             sc.valueChanged.connect(lambda v, p=p: self._set(p, "capas", v))
             self.tbl.setCellWidget(r, 6, sc)
+            svr = QSpinBox()
+            svr.setRange(1, max(1, min(3, len(p.grupo.archivos))))
+            svr.setValue(p.variacion)
+            svr.setToolTip("Variación humana: alterna hasta 3 versiones del golpe según la velocidad\n"
+                           "(el PSR no tiene round robin real; esto lo aproxima y ocupa más memoria)")
+            svr.valueChanged.connect(lambda v, p=p: self._set(p, "variacion", v))
+            self.tbl.setCellWidget(r, 7, svr)
+            cst = QComboBox()
+            cst.addItems(["Auto", "Sí", "No"])
+            cst.setCurrentIndex(0 if p.estereo is None else (1 if p.estereo else 2))
+            cst.setToolTip("Estéreo real (solo si el WAV es estéreo). Ocupa el doble de memoria.")
+            cst.currentIndexChanged.connect(lambda i, p=p: self._set(p, "estereo", [None, True, False][i]))
+            if all(a.canales == 1 for a in p.grupo.archivos):
+                cst.setEnabled(False)
+            self.tbl.setCellWidget(r, 8, cst)
             sa = QSpinBox()
             sa.setRange(-12, 12)
             sa.setValue(p.afinacion)
             sa.valueChanged.connect(lambda v, p=p: self._set(p, "afinacion", v, est=False))
-            self.tbl.setCellWidget(r, 7, sa)
+            self.tbl.setCellWidget(r, 9, sa)
             bp = QPushButton()
             bp.setIcon(icon("play", "gold", 14))
             bp.setObjectName("Ghost")
             bp.setCursor(Qt.CursorShape.PointingHandCursor)
             bp.clicked.connect(lambda _=False, p=p: self.play(p))
-            self.tbl.setCellWidget(r, 8, bp)
+            self.tbl.setCellWidget(r, 10, bp)
         self._loading = False
         self.piano.set_keys({p.nota: ("OK" if p.usar else "INFO") for p in self.piezas})
         self.piano.labels = {}
@@ -387,6 +435,7 @@ class ImportPage(Page):
     def _set(self, p, attr, val, est=True):
         if self._loading:
             return
+        self._snap()
         setattr(p, attr, val)
         if attr == "tipo" or attr == "usar":
             self.piano.set_keys({x.nota: ("OK" if x.usar else "INFO") for x in self.piezas})
@@ -398,6 +447,7 @@ class ImportPage(Page):
     def _set_group(self, p, i):
         if self._loading:
             return
+        self._snap()
         p.grupo = self.grupos[i]
         p.version = 0
         p.capas = 1
@@ -409,6 +459,7 @@ class ImportPage(Page):
         """Mueve la pieza a otra tecla; si estaba ocupada, intercambia."""
         if self._loading or p.nota == nota:
             return
+        self._snap()
         otra = next((x for x in self.piezas if x.nota == nota and x is not p), None)
         if otra is not None:
             otra.nota = p.nota
@@ -420,6 +471,7 @@ class ImportPage(Page):
     def remove_selected(self):
         r = self.tbl.currentRow()
         if 0 <= r < len(self.piezas):
+            self._snap()
             del self.piezas[r]
             self.refresh(keep_row=r)
 
@@ -433,6 +485,7 @@ class ImportPage(Page):
 
     def _add(self, gi, vi, nota=None):
         g = self.grupos[gi]
+        self._snap()
         usadas = {p.nota for p in self.piezas}
         if nota is None:
             cand = I.PIEZAS[g.tipo][1] + I.PIEZAS["perc"][1] + list(range(27, 88))
@@ -513,7 +566,8 @@ class ImportPage(Page):
             return
         self._est_gen += 1
         gen = self._est_gen
-        piezas = [I.Pieza(p.nota, p.tipo, p.grupo, p.version, p.capas, p.afinacion, p.usar, p.copia_de) for p in self.piezas]
+        import dataclasses
+        piezas = [dataclasses.replace(p) for p in self.piezas]
         op = self._opts()
 
         def done(plan):

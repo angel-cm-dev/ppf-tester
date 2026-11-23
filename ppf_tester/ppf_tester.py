@@ -214,6 +214,21 @@ def cmd_importar(a):
     print(f"\nKit: {out}  ({plan.mb:.2f} MB para {modelo})")
 
 
+def cmd_mejorar_carpeta(a):
+    import mejora as Mj
+    import modelos
+    modelo = a.modelo if a.modelo.startswith("PSR-") else "PSR-" + a.modelo.upper()
+    if modelo not in modelos.MODELOS:
+        sys.exit("Modelo desconocido. Usa: " + ", ".join(modelos.MODELOS))
+    base = dict(Mj.PLANTILLAS.get(a.plantilla, {})) if a.plantilla else {}
+    base["modelo"] = modelo
+    op = Mj.OpcionesMejora(**base)
+    salida = a.salida or os.path.join(a.carpeta, "mejorados")
+    for f, r in Mj.mejorar_carpeta(a.carpeta, salida, op, log=print):
+        print(f"  {f}: {r}")
+    print(f"\nGuardados en: {salida}")
+
+
 def cmd_puertos(a):
     import midi_test as M
     print("Salidas MIDI:")
@@ -354,6 +369,13 @@ def main(argv=None):
     s.add_argument("--sin-procesar", action="store_true", help="No aplicar la mejora por pieza")
     s.add_argument("--salida")
     s.set_defaults(f=cmd_importar)
+
+    s = sub.add_parser("mejorar-carpeta", help="Mejora todos los .ppf de una carpeta.")
+    s.add_argument("carpeta")
+    s.add_argument("--modelo", default="S670", help="S670, S770, S775, S970 o S975")
+    s.add_argument("--plantilla", help="Worship suave, Worship moderno, Rock potente, Natural (mínimo) o Solo limpieza")
+    s.add_argument("--salida", help="Carpeta de salida (por defecto <carpeta>\\mejorados)")
+    s.set_defaults(f=cmd_mejorar_carpeta)
 
     s = sub.add_parser("puertos", help="Lista puertos MIDI y entradas de audio.")
     s.set_defaults(f=cmd_puertos)

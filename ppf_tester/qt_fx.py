@@ -14,7 +14,7 @@ from PySide6.QtGui import (QBrush, QColor, QIcon, QLinearGradient, QPainter, QPa
 from PySide6.QtWidgets import (QFrame, QGraphicsOpacityEffect, QLabel, QSizePolicy, QStackedWidget,
                                QVBoxLayout, QWidget)
 
-from qt_theme import C, font, q
+from qt_theme import C, claro, font, q, rgba
 
 
 # ======================================================================= fondo
@@ -128,7 +128,7 @@ class StageBackground(QWidget):
         # viñeta
         g = QLinearGradient(0, 0, 0, h)
         g.setColorAt(0, QColor(0, 0, 0, 0))
-        g.setColorAt(1, QColor(0, 0, 0, 110))
+        g.setColorAt(1, QColor(0, 0, 0, 25 if claro() else 110))
         p.fillRect(QRectF(0, 0, w, h), QBrush(g))
 
     def _paint_particles(self, p, w, h, t, boost):
@@ -137,7 +137,7 @@ class StageBackground(QWidget):
             yy = (y - t * v) % 1.0
             xx = x + 0.01 * math.sin(t * 0.5 + ph)
             a = int(60 * (0.5 + 0.5 * math.sin(t * 0.8 + ph)) * (1 - abs(yy - 0.5)) * boost)
-            p.setBrush(QColor(255, 236, 210, max(0, min(255, a))))
+            p.setBrush(QColor(150, 110, 60, max(0, min(255, a // 2))) if claro() else QColor(255, 236, 210, max(0, min(255, a))))
             p.drawEllipse(QPointF(xx * w, yy * h), s, s)
 
 
@@ -292,7 +292,7 @@ def caption(text: str) -> QLabel:
 class Toast(QLabel):
     def __init__(self, parent):
         super().__init__(parent)
-        self.setStyleSheet(f"background: rgba(24,24,30,235); border: 1px solid {C['line2']}; border-radius: 12px;"
+        self.setStyleSheet(f"background: {rgba('card2', 240)}; border: 1px solid {C['line2']}; border-radius: 12px;"
                            f" padding: 12px 18px; font-size: 10pt;")
         self.setWordWrap(True)
         self.setMaximumWidth(420)
@@ -497,11 +497,15 @@ class GlowPiano(QWidget):
 
 # ====================================================================== onda
 class WaveView(QWidget):
-    """Forma de onda, espectro o comparación A/B (varias envolventes)."""
+    """Forma de onda, espectro o comparación A/B (varias envolventes).
+    Con `editable`, clic izquierdo fija el inicio y clic derecho el final del recorte."""
+    marksChanged = Signal(float, float)
 
     def __init__(self, parent=None, height=180):
         super().__init__(parent)
         self.setMinimumHeight(height)
+        self.marks = None            # (inicio_s, fin_s, fade_in_s, fade_out_s)
+        self.editable = False
         self.mode = "onda"
         self.x = None
         self.sr = 44100
@@ -578,11 +582,42 @@ class WaveView(QWidget):
                 p.setPen(q("mut"))
                 p.setFont(font(8))
                 p.drawText(QRectF(10, h - 22, 200, 16), Qt.AlignmentFlag.AlignLeft, f"{n / self.sr:.2f} s")
+                if self.marks:
+                    t0, t1, fi, fo = self.marks
+                    dur = n / self.sr
+                    x0, x1 = t0 / dur * w, min(t1, dur) / dur * w
+                    p.setPen(Qt.PenStyle.NoPen)
+                    p.setBrush(QColor(0, 0, 0, 150))
+                    p.drawRect(QRectF(0, 0, x0, h))
+                    p.drawRect(QRectF(x1, 0, w - x1, h))
+                    pen = QPen(q("coral"), 2)
+                    p.setPen(pen)
+                    p.drawLine(QPointF(x0, 0), QPointF(x0, h))
+                    p.drawLine(QPointF(x1, 0), QPointF(x1, h))
+                    p.setPen(QPen(QColor(255, 255, 255, 160), 1.5, Qt.PenStyle.DashLine))
+                    if fi > 0:
+                        p.drawLine(QPointF(x0, h - 8), QPointF(x0 + fi / dur * w, 30))
+                    if fo > 0:
+                        p.drawLine(QPointF(x1 - fo / dur * w, 30), QPointF(x1, h - 8))
         if self.title:
             p.setPen(q("fg"))
             p.setFont(font(10, 600))
             p.drawText(QRectF(14, 8, w - 28, 20), Qt.AlignmentFlag.AlignLeft, self.title)
         p.end()
+
+    def mousePressEvent(self, e):
+        if not self.editable or self.x is None or self.mode != "onda" or not self.marks:
+            return
+        dur = len(self.x) / self.sr
+        t = max(0.0, min(dur, e.position().x() / max(1, self.width()) * dur))
+        t0, t1, fi, fo = self.marks
+        if e.button() == Qt.MouseButton.RightButton:
+            t1 = max(t, t0 + 0.005)
+        else:
+            t0 = min(t, t1 - 0.005)
+        self.marks = (t0, t1, fi, fo)
+        self.marksChanged.emit(t0, t1)
+        self.update()
 
     def _paint_spectrum(self, p, w, h):
         import dsp
@@ -682,7 +717,7 @@ class MemoryBars(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.rows = []
-        self.setMinimumHeight(150)
+        self.setFixedHeight(128)
 
     def set_rows(self, rows):   # [(nombre, mb_kit, mb_modelo, estado)]
         self.rows = rows
@@ -709,7 +744,7 @@ class MemoryBars(QWidget):
             col = {"OK": "OK", "AVISO": "AVISO", "ERROR": "ERROR"}[st]
             p.setBrush(q(col))
             p.drawRoundedRect(QRectF(bx, y + 6, max(4, bw * min(1, pct / 100)), 6), 3, 3)
-            y += 28
+            y += 24
         p.end()
 
 
@@ -750,7 +785,7 @@ class _SplashOverlay(QWidget):
         p.setPen(q("fg"))
         p.setFont(font(26, 300, display=True))
         p.drawText(QRectF(0, 170, self.width(), 44), Qt.AlignmentFlag.AlignCenter, "PPF TESTER")
-        p.setPen(QColor("#cfc6d6"))
+        p.setPen(q("mut"))
         p.setFont(font(8.5, 700))
         p.drawText(QRectF(0, 214, self.width(), 20), Qt.AlignmentFlag.AlignCenter, "SAMPLE LAB  ·  YAMAHA PSR-S")
         p.setPen(q("mut"))

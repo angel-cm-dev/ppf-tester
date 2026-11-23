@@ -195,6 +195,23 @@ class Settings:
     use_velocity: bool = True
     reverb: float | None = None     # 0..1, None = el de la voz
     master_db: float = 0.0
+    humanizar: bool = False         # variación humana: cada golpe suena ligeramente distinto
+    cal_eq: list | None = None      # calibración con el PSR: [(frecuencia, dB), ...]
+    cal_vel: float = 1.0            # calibración: escala de la curva de velocidad
+
+
+def eq_grafico(x: np.ndarray, sr: float, puntos: list) -> np.ndarray:
+    """Aplica una curva de corrección (frecuencia, dB) por FFT (fase cero, sin clics)."""
+    if not puntos or not len(x):
+        return x
+    n = len(x)
+    N = 1 << int(np.ceil(np.log2(n + 1)))
+    f = np.fft.rfftfreq(N, 1 / sr)
+    fs = np.array([p[0] for p in puntos], float)
+    gs = np.array([p[1] for p in puntos], float)
+    g_db = np.interp(np.log10(np.maximum(f, 10)), np.log10(fs), gs)
+    X = np.fft.rfft(x, N, axis=0)
+    return np.fft.irfft(X * (10 ** (g_db / 20))[:, None], N, axis=0)[:n]
 
 
 class Engine:
@@ -240,7 +257,7 @@ class Engine:
         else:
             db = 40 * np.log10(vel / 127)
         depth = self.common.get("touch_depth", 64) / 64.0
-        return db * depth
+        return db * depth * self.settings.cal_vel
 
     def render(self, note: int, vel: int) -> tuple[np.ndarray, int]:
         """Devuelve (audio estéreo float32, grupo alterno)."""
@@ -277,6 +294,8 @@ class Engine:
             g = 10 ** (g_db / 20)
             th = (es.pan + 1) * np.pi / 4            # paneo de potencia constante
             x = x * g * np.array([np.cos(th), np.sin(th)]) * np.sqrt(2)
+            if self.settings.cal_eq:
+                x = eq_grafico(x, SR, self.settings.cal_eq)
             rv = self.settings.reverb if self.settings.reverb is not None else self.common["reverb"] / 127
             x = reverb(x, SR, rv * es.rev_send / 127)
             if out is None:
@@ -292,6 +311,20 @@ class Engine:
         self._cache[key] = res
         return res
 
+    def render_play(self, note: int, vel: int) -> tuple[np.ndarray, int]:
+        """Como render(), pero con variación humana si está activada (para tocar en vivo)."""
+        buf, group = self.render(note, vel)
+        if not self.settings.humanizar or len(buf) < 64:
+            return buf, group
+        rng = np.random.default_rng()
+        cents = rng.uniform(-7, 7)
+        g = 10 ** (rng.uniform(-1.5, 1.0) / 20)
+        y = _resample(buf.astype(np.float64), 2 ** (cents / 1200)) * g
+        # leve cambio de brillo (golpe más o menos centrado)
+        if rng.random() < 0.5:
+            y = _filt(*_biquad("lp", rng.uniform(9000, 16000), 0.707, SR), y)
+        return y.astype(np.float32), group
+
 
 # ------------------------------------------------------------- mezclador
 class Mixer:
@@ -304,6 +337,7 @@ class Mixer:
         self.lock = threading.Lock()
         self.max_voices = max_voices
         self.peak = 0.0
+        self.rec = None                     # lista de bloques mientras se graba un loop
         self.stream = sd.OutputStream(samplerate=SR, channels=2, dtype="float32", device=device,
                                       latency="low", callback=self._cb)
         self.stream.start()
@@ -324,6 +358,17 @@ class Mixer:
         pk = float(np.abs(out).max()) if frames else 0.0
         self.peak = max(pk, self.peak * 0.9)
         np.clip(out, -1, 1, out=out)
+        if self.rec is not None:
+            self.rec.append(out.copy())
+
+    def start_rec(self):
+        with self.lock:
+            self.rec = []
+
+    def stop_rec(self) -> np.ndarray:
+        with self.lock:
+            blocks, self.rec = self.rec or [], None
+        return np.concatenate(blocks) if blocks else np.zeros((0, 2), np.float32)
 
     def play(self, buf: np.ndarray, group: int = 0, note: int = -1, exclusive_note: bool = True):
         with self.lock:

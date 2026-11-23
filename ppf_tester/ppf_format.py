@@ -352,6 +352,10 @@ class Pack:
         return "?"
 
     def save(self, path: str):
+        with open(path, "wb") as f:
+            f.write(self.to_bytes())
+
+    def to_bytes(self) -> bytes:
         out = MAGIC + self.header_flags
         chunks = list(self.top)
         for r in self.resources:
@@ -361,13 +365,16 @@ class Pack:
             body = body[:len(body) - _pad4(last)]
             chunks.append((b"BLOB", body))
         out += write_chunks(chunks)
-        with open(path, "wb") as f:
-            f.write(out)
+        return out
 
 
 def load_pack(path: str) -> Pack:
     with open(path, "rb") as f:
         data = f.read()
+    return load_pack_bytes(data, path)
+
+
+def load_pack_bytes(data: bytes, path: str = "") -> Pack:
     if data[:4] != MAGIC:
         raise ValueError("No es un archivo .ppf de Yamaha Expansion Manager (falta 'XPFH').")
     flags = data[4:8]
@@ -559,5 +566,70 @@ def set_velocity_layers(pack: Pack, voice: Voice, waveform: int, layers: list[tu
     new_wf = wf[:kbs[0].start()] + "".join(new_kbs) + wf[kbs[-1].end():]
     new_wf = re.sub(r"<maxSampleCount>\d+</maxSampleCount>", f"<maxSampleCount>{nsamples}</maxSampleCount>", new_wf, count=1)
     xml = xml[:m.start()] + new_wf + xml[m.end():]
+    r.set(b"FBIN", xml.encode("utf-8"))
+    return True
+
+
+
+# ------------------------------------------------- mapeo: mover teclas y capas
+def _bloque(xml: str, tag: str, number: int):
+    m = re.search(rf'<{tag} number="{number}"[^>]*>.*?</{tag}>', xml, re.S)
+    return m
+
+
+def mover_tecla(pack: Pack, voice: Voice, src: int, dst: int) -> bool:
+    """Intercambia todo lo que suena en la tecla src con la tecla dst (drum kits)."""
+    if src == dst:
+        return False
+    r = voice_resource(pack, voice)
+    xml = r.get(b"FBIN").decode("utf-8")
+    for tag in ("voiceElement", "waveform"):
+        a, b = _bloque(xml, tag, src), _bloque(xml, tag, dst)
+        if not a or not b:
+            return False
+        ta, tb = a.group(0), b.group(0)
+
+        def renum(block, old, new):
+            block = re.sub(rf'<{tag} number="{old}"', f'<{tag} number="{new}"', block, count=1)
+            if tag == "voiceElement":
+                nn = note_name(new)
+                block = re.sub(r"<noteLimitHi>[^<]*</noteLimitHi>", f"<noteLimitHi>{nn}</noteLimitHi>", block, count=1)
+                block = re.sub(r"<noteLimitLo>[^<]*</noteLimitLo>", f"<noteLimitLo>{nn}</noteLimitLo>", block, count=1)
+                block = re.sub(r"<waveformNum>\d+</waveformNum>", f"<waveformNum>{new}</waveformNum>", block, count=1)
+            return block
+
+        na, nb = renum(tb, dst, src), renum(ta, src, dst)
+        if a.start() < b.start():
+            xml = xml[:a.start()] + na + xml[a.end():b.start()] + nb + xml[b.end():]
+        else:
+            xml = xml[:b.start()] + nb + xml[b.end():a.start()] + na + xml[a.end():]
+    r.set(b"FBIN", xml.encode("utf-8"))
+    return True
+
+
+def capas_de(voice: Voice, waveform: int) -> list[tuple[int, int, str]]:
+    return [(kb.vel_lo, kb.vel_hi, kb.samples[0].wave_uid) for kb in voice.keybanks.get(waveform, [])]
+
+
+def fijar_rangos(pack: Pack, voice: Voice, waveform: int, rangos: list[tuple[int, int]]) -> bool:
+    """Cambia los rangos de velocidad de las capas (keybanks) de una tecla."""
+    r = voice_resource(pack, voice)
+    xml = r.get(b"FBIN").decode("utf-8")
+    m = _bloque(xml, "waveform", waveform)
+    if not m:
+        return False
+    wf = m.group(0)
+    kbs = list(re.finditer(r'<keybank number="\d+">.*?</keybank>', wf, re.S))
+    if len(kbs) != len(rangos):
+        return False
+    out, last = [], 0
+    for k, (lo, hi) in zip(kbs, rangos):
+        b = k.group(0)
+        b = re.sub(r"<velocityLimitHi>\d+</velocityLimitHi>", f"<velocityLimitHi>{int(hi)}</velocityLimitHi>", b, count=1)
+        b = re.sub(r"<velocityLimitLo>\d+</velocityLimitLo>", f"<velocityLimitLo>{int(lo)}</velocityLimitLo>", b, count=1)
+        out.append(wf[last:k.start()] + b)
+        last = k.end()
+    wf = "".join(out) + wf[last:]
+    xml = xml[:m.start()] + wf + xml[m.end():]
     r.set(b"FBIN", xml.encode("utf-8"))
     return True

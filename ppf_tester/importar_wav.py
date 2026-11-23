@@ -291,6 +291,8 @@ class Pieza:
     afinacion: int = 0        # semitonos
     usar: bool = True
     copia_de: int | None = None   # nota cuya muestra reutiliza (sin memoria extra)
+    variacion: int = 1            # round robin aproximado: nº de versiones que se alternan por velocidad
+    estereo: bool | None = None   # None = automático (platos en estéreo si hay memoria)
 
     @property
     def nombre(self) -> str:
@@ -299,6 +301,13 @@ class Pieza:
     @property
     def max_capas(self) -> int:
         return len(self.grupo.archivos)
+
+    def alternativas(self, a: "Archivo", n: int) -> list["Archivo"]:
+        """Otras versiones del golpe con volumen parecido a «a» (para alternar)."""
+        if n <= 1 or self.grupo.capas_en_nombre:
+            return []
+        otras = sorted((x for x in self.grupo.archivos if x is not a), key=lambda x: abs(x.rms_db - a.rms_db))
+        return otras[:n - 1]
 
     def seleccion(self, max_capas: int | None = None) -> list[Archivo]:
         """Archivos de suave a fuerte para esta tecla."""
@@ -500,7 +509,7 @@ def rangos(n: int) -> list[tuple[int, int]]:
 @dataclass
 class Plan:
     piezas: list[Pieza]
-    audio: dict                    # (id(Archivo), mono) -> np.ndarray
+    audio: dict                    # clave -> np.ndarray
     capas: dict                    # nota -> [(vlo, vhi, clave_audio)]
     mb: float
     pasos: list[str] = field(default_factory=list)
@@ -520,7 +529,7 @@ def planificar(piezas: list[Pieza], op: OpcionesImport, log=lambda s: None) -> P
         for p in activas:
             fam = PIEZAS[p.tipo][2]
             sel = p.seleccion(tope_capas)
-            mono = not (estereo and (fam in ("crash", "ride") or p.tipo == "hh_open"))
+            mono = (not p.estereo) if p.estereo is not None else not (estereo and (fam in ("crash", "ride") or p.tipo == "hh_open"))
             claves = []
             pk_fuerte = None
             for a in sel:
@@ -533,13 +542,37 @@ def planificar(piezas: list[Pieza], op: OpcionesImport, log=lambda s: None) -> P
                 claves.append(k)
             pk_fuerte = max((np.abs(audio[k]).max() for k in claves if len(audio[k])), default=1) or 1
             capas_map[p.nota] = []
-            for (lo, hi), k in zip(rangos(len(claves)), claves):
+
+            def nivelar(k):
                 y = audio[k]
                 ref = pk_fuerte if op.dinamica_natural else max(np.abs(y).max(), 1e-9)
                 kk = k + (op.dinamica_natural and round(float(pk_fuerte), 4),)
                 if kk not in audio:
                     audio[kk] = np.clip(y * (10 ** (-0.5 / 20) / ref), -1, 32767 / 32768)
-                capas_map[p.nota].append((lo, hi, kk))
+                return kk
+
+            nvar = p.variacion if (p.variacion > 1 and tope_capas > 1) else 1
+            for (lo, hi), k, a in zip(rangos(len(claves)), claves, sel):
+                if nvar <= 1:
+                    capas_map[p.nota].append((lo, hi, nivelar(k)))
+                    continue
+                # variación humana: la capa se reparte en tramos de velocidad que alternan versiones
+                vers = [k]
+                for alt in p.alternativas(a, nvar):
+                    ka = (id(alt), mono, round(factor, 2), tail_db)
+                    if ka not in audio:
+                        y = _preparar(alt.x, mono, LARGO_MAX[fam] * factor, tail_db)
+                        if op.procesar and len(y) > 32:
+                            y = procesar(y, SR, fam, op.intensidad)
+                        audio[ka] = y
+                    vers.append(ka)
+                vers = [nivelar(v) for v in vers]
+                ancho = max(3, -(-(hi - lo + 1) // 12))
+                v0, i = lo, 0
+                while v0 <= hi:
+                    v1 = min(hi, v0 + ancho - 1)
+                    capas_map[p.nota].append((v0, v1, vers[i % len(vers)]))
+                    v0, i = v1 + 1, i + 1
         usadas = {k for v in capas_map.values() for _, _, k in v}
         mb = sum(audio[k].shape[0] * audio[k].shape[1] * 2 for k in usadas) / 1e6
         if mb <= m.kit_max_mb or intento == 9:
@@ -592,8 +625,10 @@ def _sub_elemento(xml: str, nota: int, bloque: str, tag: str, valor: str) -> str
 
 
 def construir(plan: Plan, op: OpcionesImport, salida: str) -> Pack:
-    xml = gzip.decompress(open(os.path.join(PLANTILLAS, "drum_kit.xml.gz"), "rb").read()).decode("utf-8")
-    kb_tpl = open(os.path.join(PLANTILLAS, "keybank.xml"), encoding="utf-8").read()
+    with open(os.path.join(PLANTILLAS, "drum_kit.xml.gz"), "rb") as f:
+        xml = gzip.decompress(f.read()).decode("utf-8")
+    with open(os.path.join(PLANTILLAS, "keybank.xml"), encoding="utf-8") as f:
+        kb_tpl = f.read()
     nombre = re.sub(r"[^\w \-\.&']", "", op.nombre).strip()[:20] or "Mi Kit"
     xml = xml.replace("{NAME}", nombre)
     ondas: dict[str, tuple] = {}

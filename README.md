@@ -20,6 +20,16 @@
   <img src="docs/samples.jpg" width="860" alt="Muestras">
 </p>
 
+## Novedades de la versión 4
+
+- **Importar WAV** con variación humana (round robin aproximado) y estéreo real por pieza.
+- **Calibrar con tu PSR**, tocar desde un **teclado MIDI**, más ritmos con **metrónomo y swing**, y **grabar loops**.
+- **Ajuste fino por pieza**, **plantillas**, **mejorar carpetas enteras** y **comparar con un kit de referencia**.
+- **Deshacer/rehacer**, **editor de mapeo** (arrastrar teclas, rangos de velocidad) y **recortes/fades**.
+- **Instalador**, **actualización desde la app**, **idiomas** (español, inglés, portugués), **tema claro**,
+  registro de errores y pruebas automáticas.
+- Página del programa: https://angel-cm-dev.github.io/ppf-tester/
+
 ## Novedades de la versión 3
 
 - Interfaz nueva en **Qt**: barra lateral, tarjetas, transiciones suaves y tipografía cuidada.
@@ -65,8 +75,9 @@
 
 ## Descarga (recomendado)
 
-1. Ve a **[Releases](https://github.com/angel-cm-dev/ppf-tester/releases/latest)** y descarga **`PPF-Tester.exe`**.
-2. Ábrelo. No necesitas instalar Python ni nada más (≈ 52 MB, Windows 10/11).
+1. Ve a **[Releases](https://github.com/angel-cm-dev/ppf-tester/releases/latest)** y descarga **`PPF-Tester-Setup-vX.Y.Z.exe`** (instalador)
+   o **`PPF-Tester.exe`** (portable, sin instalar).
+2. Ábrelo. No necesitas instalar Python ni nada más (≈ 52 MB, Windows 10/11). La app avisa e instala sola las versiones nuevas.
 
 > Windows SmartScreen puede avisar la primera vez porque el ejecutable no está firmado:
 > pulsa **“Más información” → “Ejecutar de todas formas”**.
@@ -90,6 +101,8 @@ python ppf_tester/qt_main.py
 python ppf_tester/ppf_tester.py analizar MI_KIT.ppf --abrir
 python ppf_tester/ppf_tester.py importar "C:\Mis WAV\Real Drums" --modelo S670
 python ppf_tester/ppf_tester.py mejorar  MI_KIT.ppf --modelo S670
+python ppf_tester/ppf_tester.py mejorar-carpeta "C:\Mis kits" --modelo S670
+python -m unittest discover -s tests          # pruebas automáticas
 python ppf_tester/ppf_tester.py corregir MI_KIT.ppf --agrupar-hihat
 python ppf_tester/ppf_tester.py extraer  MI_KIT.ppf
 python ppf_tester/ppf_tester.py puertos
@@ -126,9 +139,9 @@ Contenedor `XPFH` con bloques `TAG + longitud (big-endian)` alineados a 4 bytes.
 con `EUID`, `ETIT`, `EEXT` (`uvf` = voz en XML, `APCp` = onda) y `FBIN`. Las ondas son AIFF tipo `YTWV`
 (PCM 16 bits) y su `EUID` es el SHA-1 del contenido; el programa lo recalcula al modificar una muestra.
 
-## Próximas mejoras
+## Hoja de ruta
 
-Una mejora nueva cada día: mira la [hoja de ruta](ROADMAP.md).
+Mira la [hoja de ruta](ROADMAP.md) y el [historial de cambios](CHANGELOG.md).
 
 ## Licencia
 

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PPF Tester — Sample Lab para Yamaha PSR-S</title>
+<meta name="description" content="Crea, escucha y mejora kits de batería .ppf para Yamaha PSR-S670, S770, S775, S970 y S975. Gratis y de código abierto. Por Angel Cm.">
+<meta property="og:title" content="PPF Tester — Sample Lab para Yamaha PSR-S">
+<meta property="og:description" content="Crea, escucha y mejora kits de batería .ppf para tu Yamaha PSR-S.">
+<meta property="og:image" content="https://angel-cm-dev.github.io/ppf-tester/empty.jpg">
+<link rel="icon" href="logo.png">
+<style>
+:root{--bg:#08080a;--card:#121216;--line:#25252d;--fg:#f5f1ea;--mut:#a39fac;--gold:#f4b860;--coral:#ec6f7f;--violet:#8b6cff}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;overflow-x:hidden}
+a{color:var(--gold);text-decoration:none}
+.stage{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.light{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;animation:float 18s ease-in-out infinite}
+.l1{width:55vw;height:55vw;left:55%;top:-25%;background:radial-gradient(circle,rgba(244,184,96,.55),transparent 65%)}
+.l2{width:45vw;height:45vw;left:75%;top:55%;background:radial-gradient(circle,rgba(236,111,127,.45),transparent 65%);animation-delay:-6s}
+.l3{width:40vw;height:40vw;left:-10%;top:5%;background:radial-gradient(circle,rgba(139,108,255,.35),transparent 65%);animation-delay:-11s}
+.beam{position:absolute;top:-10%;width:14vw;height:130%;background:linear-gradient(180deg,rgba(244,184,96,.16),transparent 75%);transform-origin:top center;animation:sway 14s ease-in-out infinite}
+.b1{left:66%;transform:rotate(18deg)}.b2{left:84%;transform:rotate(6deg);background:linear-gradient(180deg,rgba(236,111,127,.13),transparent 75%);animation-delay:-5s}
+@keyframes float{50%{transform:translate(-4%,5%) scale(1.08)}}
+@keyframes sway{50%{transform:rotate(-8deg)}}
+@media (prefers-reduced-motion:reduce){.light,.beam{animation:none}}
+header{max-width:1120px;margin:0 auto;padding:28px 24px;display:flex;align-items:center;gap:14px}
+header img{width:44px;height:44px}
+header .brand{font-weight:300;letter-spacing:3px;font-size:20px}
+header nav{margin-left:auto;display:flex;gap:22px;font-size:15px}
+header nav a{color:var(--mut)}header nav a:hover{color:var(--fg)}
+.hero{max-width:1120px;margin:0 auto;padding:70px 24px 40px;text-align:center}
+.eyebrow{color:var(--gold);font-weight:700;letter-spacing:3px;font-size:13px}
+h1{font-size:clamp(40px,7vw,78px);font-weight:300;line-height:1.05;margin:16px 0 18px;letter-spacing:-1px}
+h1 span{background:linear-gradient(90deg,var(--gold),var(--coral));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{max-width:720px;margin:0 auto;color:var(--mut);font-size:19px}
+.cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:34px 0 16px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 26px;border-radius:12px;font-weight:700;font-size:16px;border:1px solid var(--line);color:var(--fg);background:rgba(255,255,255,.04);transition:.2s}
+.btn:hover{background:rgba(255,255,255,.08)}
+.btn.primary{background:linear-gradient(135deg,var(--gold),#f19a6c);color:#1a1007;border:none;box-shadow:0 10px 40px rgba(244,184,96,.25)}
+.btn.primary:hover{transform:translateY(-2px);box-shadow:0 14px 50px rgba(244,184,96,.35)}
+.small{color:var(--mut);font-size:14px}
+.shot{max-width:1120px;margin:40px auto 0;padding:0 24px}
+.shot img{width:100%;border-radius:18px;border:1px solid var(--line);box-shadow:0 40px 120px rgba(0,0,0,.6)}
+section{max-width:1120px;margin:0 auto;padding:90px 24px 10px}
+h2{font-size:38px;font-weight:300;margin:0 0 8px}
+.sub{color:var(--mut);margin:0 0 36px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.card{background:rgba(18,18,22,.82);border:1px solid var(--line);border-radius:16px;padding:24px;backdrop-filter:blur(6px)}
+.card h3{margin:6px 0 8px;font-size:19px}
+.card p{margin:0;color:var(--mut);font-size:15px}
+.card .ic{font-size:26px}
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+.duo img{width:100%;border-radius:14px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;background:rgba(18,18,22,.82);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{padding:14px 18px;text-align:left;border-bottom:1px solid var(--line)}th{color:var(--mut);font-size:13px;letter-spacing:1px}
+ol{color:var(--mut);padding-left:22px}ol li{margin:8px 0}ol b{color:var(--fg)}
+@media (max-width:760px){header nav{display:none}}
+footer{max-width:1120px;margin:90px auto 0;padding:34px 24px 50px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;color:var(--mut);font-size:14px}
+</style>
+</head>
+<body>
+<div class="stage"><div class="light l1"></div><div class="light l2"></div><div class="light l3"></div><div class="beam b1"></div><div class="beam b2"></div></div>
+
+<header>
+  <img src="logo.png" alt="">
+  <div class="brand">PPF TESTER</div>
+  <nav><a href="#funciones">Funciones</a><a href="#modelos">Modelos</a><a href="#como">Cómo empezar</a><a href="https://github.com/angel-cm-dev/ppf-tester">GitHub</a></nav>
+</header>
+
+<div class="hero">
+  <div class="eyebrow">SAMPLE LAB · YAMAHA PSR-S670 · S770 · S775 · S970 · S975</div>
+  <h1>Tu batería <span>suena mejor</span><br>en tu teclado.</h1>
+  <p class="lead">Arrastra tus WAV y PPF Tester arma el kit <b>.ppf</b> para Yamaha Expansion Manager. Escúchalo como sonará en tu PSR, mejóralo pieza por pieza y ajústalo a la memoria de tu modelo.</p>
+  <div class="cta">
+    <a class="btn primary" href="https://github.com/angel-cm-dev/ppf-tester/releases/latest">⬇ Descargar para Windows</a>
+    <a class="btn" href="https://github.com/angel-cm-dev/ppf-tester">Ver el código</a>
+  </div>
+  <div class="small">Gratis · Código abierto (MIT) · Windows 10 / 11</div>
+</div>
+<div class="shot"><img src="samples.jpg" alt="PPF Tester: pantalla de muestras"></div>
+
+<section id="funciones">
+  <h2>Todo para tus kits de batería</h2>
+  <p class="sub">Pensado para músicos de alabanza que tocan con su PSR cada semana.</p>
+  <div class="grid">
+    <div class="card"><div class="ic">📂</div><h3>Importa tus WAV</h3><p>Detecta bombo, caja, toms, hi-hat y platos por carpetas, nombres o sonido. Junta versiones y capas de velocidad, y arma el kit en las teclas estándar.</p></div>
+    <div class="card"><div class="ic">🎧</div><h3>Escucha como en el PSR</h3><p>Simulación del motor del teclado, calibrable con tu PSR real, o toca el PSR por MIDI y compara A/B.</p></div>
+    <div class="card"><div class="ic">✨</div><h3>Mejora con un clic</h3><p>EQ, ataque y compresión por pieza, balance del kit, afinación de toms, capas de velocidad y ajuste fino.</p></div>
+    <div class="card"><div class="ic">🥁</div><h3>Variación humana</h3><p>Golpes que no suenan idénticos, ritmos worship 6/8, balada 12/8 y gospel con metrónomo y swing.</p></div>
+    <div class="card"><div class="ic">🎹</div><h3>Editor de mapeo</h3><p>Arrastra sonidos entre teclas, edita rangos de velocidad, recorta y aplica fades sobre la forma de onda.</p></div>
+    <div class="card"><div class="ic">💾</div><h3>Memoria bajo control</h3><p>Calcula cuánto ocupa tu kit en cada modelo y lo ajusta solo para que entre, incluso en el S670.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="duo"><img src="listen.jpg" alt="Escuchar"><img src="improve.jpg" alt="Mejorar kit"></div>
+</section>
+
+<section id="modelos">
+  <h2>Hecho para la serie S</h2>
+  <p class="sub">El tamaño recomendado deja espacio para tus otros packs.</p>
+  <table>
+    <tr><th>MODELO</th><th>MEMORIA DE EXPANSIÓN</th><th>RECOMENDADO POR KIT</th><th>CAPAS DE VELOCIDAD</th></tr>
+    <tr><td>PSR-S670</td><td>≈ 32 MB</td><td>≤ 4 MB</td><td>2</td></tr>
+    <tr><td>PSR-S770</td><td>160 MB</td><td>≤ 20 MB</td><td>3</td></tr>
+    <tr><td>PSR-S775</td><td>280 MB</td><td>≤ 30 MB</td><td>3</td></tr>
+    <tr><td>PSR-S970</td><td>512 MB</td><td>≤ 50 MB</td><td>3</td></tr>
+    <tr><td>PSR-S975</td><td>768 MB</td><td>≤ 60 MB</td><td>3</td></tr>
+  </table>
+</section>
+
+<section id="como">
+  <h2>Cómo empezar</h2>
+  <ol>
+    <li><b>Descarga</b> el instalador o el .exe desde <a href="https://github.com/angel-cm-dev/ppf-tester/releases/latest">Releases</a>.</li>
+    <li><b>Arrastra</b> tu carpeta de WAV o tu kit .ppf a la ventana.</li>
+    <li><b>Escucha y mejora</b> el kit; elige tu modelo de PSR.</li>
+    <li><b>Ábrelo en Yamaha Expansion Manager</b>, crea el archivo de instalación y cárgalo en tu teclado.</li>
+  </ol>
+  <p class="small">Windows puede mostrar un aviso de SmartScreen la primera vez: «Más información» → «Ejecutar de todas formas».</p>
+</section>
+
+<footer>
+  <div>Desarrollado por <a href="https://angelcm.com"><b>Angel Cm</b></a> · <a href="https://angelcm.com">angelcm.com</a></div>
+  <div>No afiliado a Yamaha Corporation. «Yamaha», «PSR» y «Expansion Manager» son marcas de sus respectivos dueños.</div>
+</footer>
+</body>
+</html>
